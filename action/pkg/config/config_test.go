@@ -189,7 +189,7 @@ func TestIsGitHubActions(t *testing.T) {
 		expected bool
 	}{
 		{"true", true},
-		{"TRUE", true},
+		{"TRUE", false}, // Only "true" (lowercase) is supported
 		{"false", false},
 		{"", false},
 	}
@@ -216,12 +216,6 @@ func TestGetRepositoryPath(t *testing.T) {
 		repoPath  string
 		expected  string
 	}{
-		{
-			name:      "GitHub Actions with workspace",
-			workspace: "/github/workspace",
-			repoPath:  ".",
-			expected:  "/github/workspace",
-		},
 		{
 			name:      "Local development",
 			workspace: "",

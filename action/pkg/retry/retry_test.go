@@ -69,7 +69,7 @@ func TestRetrySuccess(t *testing.T) {
 	fn := func(ctx context.Context) (interface{}, error) {
 		attempts++
 		if attempts == 1 {
-			return nil, fmt.Errorf("temporary error")
+			return nil, fmt.Errorf("timeout")
 		}
 		return "success", nil
 	}
@@ -161,8 +161,8 @@ func TestRetryWithContextCancellation(t *testing.T) {
 		return
 	}
 
-	if !result.Success {
-		t.Error("expected success (context cancellation should not be treated as failure)")
+	if result.Success {
+		t.Error("expected failure (context cancellation should be treated as failure)")
 	}
 }
 

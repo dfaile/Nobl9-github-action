@@ -1,29 +1,3 @@
-# Node
-node_modules/
-
-# Build output
-/build/
-/dist/
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Editor
-.vscode/
-.idea/
-*.swp
-
-# Env and secrets
-.env
-.env.*
-
 # Go
 *.exe
 *.exe~
@@ -31,12 +5,70 @@ Thumbs.db
 *.so
 *.dylib
 *.test
-/go.sum
-/go.mod
+*.out
+go.sum
+go.mod
+
+# Build output
+/build/
+/dist/
+/bin/
+*.exe
+nobl9-action
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+test-results.log
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # Cursor
 .cursor/
 tasks/
 
-# Misc
-coverage/ 
+# Env and secrets
+.env
+.env.*
+*.key
+*.pem
+*.crt
+
+# Node (if any frontend components)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+*.cover
+*.prof
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+.#*
+
+# Test artifacts
+testdata/
+*.test 

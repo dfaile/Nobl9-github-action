@@ -86,6 +86,10 @@ func New(config *Config, log *logger.Logger) (*Client, error) {
 
 // validateConfig validates the client configuration
 func validateConfig(config *Config) error {
+	if config == nil {
+		return errors.NewConfigError("config cannot be nil", nil)
+	}
+
 	if config.ClientID == "" {
 		return errors.NewConfigError("client ID is required", nil)
 	}

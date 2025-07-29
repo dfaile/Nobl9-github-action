@@ -14,7 +14,7 @@ Before setting up the action, ensure you have:
 2. **Okta Integration** - Nobl9 configured with Okta for user management
 3. **GitHub Repository** - Repository to store Nobl9 configurations
 4. **GitHub Actions Access** - Ability to create workflows and secrets
-5. **API Credentials** - Nobl9 client ID and secret with appropriate permissions
+5. **API Credentials** - Nobl9 client ID and client secret with appropriate permissions
 
 ## Required Secrets
 
@@ -28,7 +28,7 @@ The action requires the following GitHub secrets to authenticate with Nobl9:
 - **Required:** Yes
 - **Example:** `nobl9-client-12345`
 - **How to obtain:**
-  1. Go to Nobl9 Console > Settings > API Keys
+  1. Go to Nobl9 Console > Settings > Access Keys
   2. Create a new API key or use existing one
   3. Copy the Client ID
 
@@ -39,7 +39,7 @@ The action requires the following GitHub secrets to authenticate with Nobl9:
 - **Example:** `nobl9-secret-abcdef123456`
 - **How to obtain:**
   1. Go to Nobl9 Console > Settings > Access Keys
-  2. Create a new API key or use existing one
+  2. Create a new Access key or use existing one
   3. Copy the Client Secret
   4. **Important:** Store securely and never commit to repository
 
