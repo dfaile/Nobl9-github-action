@@ -518,6 +518,7 @@ jobs:
         with:
           go-version: '1.21'
           cache: true
+          cache-dependency-path: action/go.sum
           
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -531,7 +532,8 @@ jobs:
           
       - name: Build action
         run: |
-          go build -o nobl9-action ./cmd/main.go
+          cd action
+          go build -o ../nobl9-action ./cmd/main.go
           
       - name: Generate test projects using template
         run: |
@@ -713,11 +715,21 @@ jobs:
           
           # Overall status
           FAILED_JOBS=""
-          for job in test-template-validation test-template-scenarios test-dry-run test-action-integration test-performance; do
-            if [ "${{ needs.$job.result }}" = "failure" ]; then
-              FAILED_JOBS="$FAILED_JOBS $job"
-            fi
-          done
+          if [ "${{ needs.test-template-validation.result }}" = "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS test-template-validation"
+          fi
+          if [ "${{ needs.test-template-scenarios.result }}" = "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS test-template-scenarios"
+          fi
+          if [ "${{ needs.test-dry-run.result }}" = "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS test-dry-run"
+          fi
+          if [ "${{ needs.test-action-integration.result }}" = "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS test-action-integration"
+          fi
+          if [ "${{ needs.test-performance.result }}" = "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS test-performance"
+          fi
           
           if [ -n "$FAILED_JOBS" ]; then
             echo "## ⚠️  Test Issues Detected:" >> backstage-test-report.md

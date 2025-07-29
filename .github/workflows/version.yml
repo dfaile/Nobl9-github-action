@@ -45,6 +45,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: action/go.sum
           
       - name: Install conventional-changelog
         run: npm install -g conventional-changelog-cli@4.2.2
@@ -98,7 +99,7 @@ jobs:
         id: version
         run: |
           # Get current version
-          CURRENT_VERSION=$(cat version/version.go | grep 'Version =' | sed 's/.*Version = "\(.*\)"/\1/')
+          CURRENT_VERSION=$(cat action/version/version.go | grep 'Version =' | sed 's/.*Version = "\(.*\)"/\1/')
           echo "Current version: $CURRENT_VERSION"
           
           # Parse version components

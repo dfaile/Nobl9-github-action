@@ -43,9 +43,11 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: action/go.sum
           
       - name: Install dependencies
         run: |
+          cd action
           go mod download
           go mod verify
           
@@ -75,6 +77,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: action/go.sum
           
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -93,11 +96,12 @@ jobs:
           
       - name: Run Go vulnerability check
         run: |
+          cd action
           # Install govulncheck
           go install golang.org/x/vuln/cmd/govulncheck@latest
           
           # Run vulnerability check
-          govulncheck ./... > govulncheck-results.txt || echo "Vulnerability check completed"
+          govulncheck ./... > ../govulncheck-results.txt || echo "Vulnerability check completed"
           
       - name: Upload Go vulnerability results
         uses: actions/upload-artifact@v4
@@ -117,6 +121,7 @@ jobs:
         
       - name: Build Docker image
         run: |
+          cd action
           docker build -t nobl9-action:security-scan .
           
       - name: Run Trivy container scan
@@ -152,11 +157,7 @@ jobs:
           head: HEAD
           extra_args: --only-verified --fail
           
-      - name: Run GitGuardian secret scanner
-        uses: gitguardian/ggshield-action@main
-        with:
-          mode: scan
-          exit-zero: true
+
           
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
@@ -179,9 +180,11 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: action/go.sum
           
       - name: Check for outdated dependencies
         run: |
+          cd action
           # Install go-mod-outdated
           go install github.com/psampaz/go-mod-outdated@latest
           
@@ -190,6 +193,7 @@ jobs:
           
       - name: Verify module integrity
         run: |
+          cd action
           go mod download
           go mod verify
           go mod tidy
@@ -347,11 +351,24 @@ jobs:
           
           # Check for any failures
           FAILED_JOBS=""
-          for job in codeql-analysis dependency-scan container-scan secret-scan dependency-management security-compliance; do
-            if [ "${{ needs.$job.result }}" = "failure" ]; then
-              FAILED_JOBS="$FAILED_JOBS $job"
-            fi
-          done
+          if [ "${{ needs.codeql-analysis.result }}" = "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS codeql-analysis"
+          fi
+          if [ "${{ needs.dependency-scan.result }}" = "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS dependency-scan"
+          fi
+          if [ "${{ needs.container-scan.result }}" = "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS container-scan"
+          fi
+          if [ "${{ needs.secret-scan.result }}" = "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS secret-scan"
+          fi
+          if [ "${{ needs.dependency-management.result }}" = "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS dependency-management"
+          fi
+          if [ "${{ needs.security-compliance.result }}" = "failure" ]; then
+            FAILED_JOBS="$FAILED_JOBS security-compliance"
+          fi
           
           if [ -n "$FAILED_JOBS" ]; then
             echo "## ⚠️  Security Issues Detected:" >> security-summary.md

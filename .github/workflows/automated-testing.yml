@@ -47,29 +47,34 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
+          cache-dependency-path: action/go.sum
           
       - name: Install dependencies
         run: |
+          cd action
           go mod download
           go mod verify
           
       - name: Run unit tests with coverage
         run: |
+          cd action
           # Run tests with race detection and coverage
-          go test -v -race -coverprofile=coverage-${{ matrix.go-version }}.out -covermode=atomic ./...
+          go test -v -race -coverprofile=../coverage-${{ matrix.go-version }}.out -covermode=atomic ./...
           
           # Generate coverage report
-          go tool cover -html=coverage-${{ matrix.go-version }}.out -o coverage-${{ matrix.go-version }}.html
+          go tool cover -html=../coverage-${{ matrix.go-version }}.out -o ../coverage-${{ matrix.go-version }}.html
           
       - name: Run integration tests
         run: |
+          cd action
           # Run integration tests with longer timeout
           go test -v -timeout=10m -tags=integration ./pkg/processor/... ./pkg/nobl9/... || echo "Integration tests completed"
           
       - name: Run benchmarks
         run: |
+          cd action
           # Run benchmarks and save results
-          go test -bench=. -benchmem -benchtime=5s ./... | tee benchmark-${{ matrix.go-version }}.txt
+          go test -bench=. -benchmem -benchtime=5s ./... | tee ../benchmark-${{ matrix.go-version }}.txt
           
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
@@ -83,6 +88,7 @@ jobs:
           
       - name: Run fuzz tests
         run: |
+          cd action
           # Run fuzz tests for critical packages
           go test -fuzz=Fuzz -fuzztime=30s ./pkg/parser/... || echo "Fuzz tests completed"
           go test -fuzz=Fuzz -fuzztime=30s ./pkg/validator/... || echo "Fuzz tests completed"
@@ -369,6 +375,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+          cache-dependency-path: action/go.sum
           
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -378,7 +385,8 @@ jobs:
           
       - name: Build action
         run: |
-          go build -o nobl9-action ./cmd/main.go
+          cd action
+          go build -o ../nobl9-action ./cmd/main.go
           
       - name: Install Backstage CLI
         run: npm install -g @backstage/cli@${{ env.BACKSTAGE_VERSION }}

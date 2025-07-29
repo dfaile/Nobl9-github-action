@@ -34,6 +34,9 @@ jobs:
   prepare-release:
     name: Prepare Release
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -51,6 +54,18 @@ jobs:
         with:
           go-version: '1.21'
           cache: true
+          cache-dependency-path: action/go.sum
+          
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: |
+          # Install jq for JSON processing
+          sudo apt-get update && sudo apt-get install -y jq
           
       - name: Determine version
         id: version
@@ -79,13 +94,13 @@ jobs:
           # Install conventional-changelog-cli
           npm install -g conventional-changelog-cli
           
-          # Generate changelog
+          # Generate changelog with better error handling
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             # For manual releases, generate changelog since last tag
-            CHANGELOG=$(conventional-changelog -p angular --release-count 0 --output-format json | jq -r '.[0].body' || echo "## Changes\n- Initial release")
+            CHANGELOG=$(conventional-changelog -p angular --release-count 0 --output-format json 2>/dev/null | jq -r '.[0].body // "## Changes\n- Initial release"' 2>/dev/null || echo "## Changes\n- Initial release")
           else
             # For tag-based releases, generate changelog for the specific version
-            CHANGELOG=$(conventional-changelog -p angular --release-count 1 --output-format json | jq -r '.[0].body' || echo "## Changes\n- Release ${{ steps.version.outputs.version }}")
+            CHANGELOG=$(conventional-changelog -p angular --release-count 1 --output-format json 2>/dev/null | jq -r '.[0].body // "## Changes\n- Release ${{ steps.version.outputs.version }}"' 2>/dev/null || echo "## Changes\n- Release ${{ steps.version.outputs.version }}")
           fi
           
           # Escape newlines for GitHub output
@@ -97,16 +112,26 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           VERSION_NUMBER="${VERSION#v}"
           
+          # Check if dry run is enabled
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "DRY RUN: Would update version to $VERSION_NUMBER"
+            echo "DRY RUN: Would update version.go"
+            echo "DRY RUN: Would update action.yml"
+            echo "DRY RUN: Would update Dockerfile"
+            exit 0
+          fi
+          
           # Update version.go
-          sed -i "s/Version = \".*\"/Version = \"$VERSION_NUMBER\"/" version/version.go
+          sed -i "s/Version = \".*\"/Version = \"$VERSION_NUMBER\"/" action/version/version.go
           
           # Update action.yml
-          sed -i "s/uses: .*@.*/uses: ${{ env.REGISTRY }}\/${{ env.IMAGE_NAME }}@$VERSION/" action.yml
+          sed -i "s/uses: .*@.*/uses: ${{ env.REGISTRY }}\/${{ env.IMAGE_NAME }}@$VERSION/" action/action.yml
           
           # Update Dockerfile labels
-          sed -i "s/LABEL version=\".*\"/LABEL version=\"$VERSION_NUMBER\"/" Dockerfile
+          sed -i "s/LABEL version=\".*\"/LABEL version=\"$VERSION_NUMBER\"/" action/Dockerfile
           
       - name: Commit version changes
+        if: github.event.inputs.dry_run != 'true'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
@@ -114,7 +139,7 @@ jobs:
           git commit -m "chore: bump version to ${{ steps.version.outputs.version }}" || echo "No changes to commit"
           
       - name: Create and push tag
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true'
         run: |
           git tag ${{ steps.version.outputs.tag }}
           git push origin ${{ steps.version.outputs.tag }}
@@ -134,21 +159,25 @@ jobs:
         with:
           go-version: '1.21'
           cache: true
+          cache-dependency-path: action/go.sum
           
       - name: Run tests
         run: |
-          go test -v -race -coverprofile=coverage.out ./...
+          cd action
+          go test -v -race -coverprofile=../coverage.out ./...
           
       - name: Build action
         run: |
+          cd action
           # Build for multiple platforms
-          GOOS=linux GOARCH=amd64 go build -o nobl9-action-linux-amd64 ./cmd/main.go
-          GOOS=linux GOARCH=arm64 go build -o nobl9-action-linux-arm64 ./cmd/main.go
-          GOOS=darwin GOARCH=amd64 go build -o nobl9-action-darwin-amd64 ./cmd/main.go
-          GOOS=darwin GOARCH=arm64 go build -o nobl9-action-darwin-arm64 ./cmd/main.go
+          GOOS=linux GOARCH=amd64 go build -o ../nobl9-action-linux-amd64 ./cmd/main.go
+          GOOS=linux GOARCH=arm64 go build -o ../nobl9-action-linux-arm64 ./cmd/main.go
+          GOOS=darwin GOARCH=amd64 go build -o ../nobl9-action-darwin-amd64 ./cmd/main.go
+          GOOS=darwin GOARCH=arm64 go build -o ../nobl9-action-darwin-arm64 ./cmd/main.go
           
       - name: Test Docker build
         run: |
+          cd action
           docker build -t nobl9-action:test .
           docker run --rm nobl9-action:test --help
           
@@ -159,12 +188,14 @@ jobs:
           path: |
             nobl9-action-*
           retention-days: 30
+          if-no-files-found: error
 
   # Build and push Docker image
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
     needs: [prepare-release, build-and-test]
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: write
@@ -198,9 +229,10 @@ jobs:
             type=raw,value=${{ needs.prepare-release.outputs.version }}
           
       - name: Build and push Docker image
+        if: github.event.inputs.dry_run != 'true'
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./action
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -219,6 +251,7 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [prepare-release, build-and-push]
+    timeout-minutes: 30
     permissions:
       contents: write
       
@@ -232,6 +265,7 @@ jobs:
           name: action-binaries-${{ needs.prepare-release.outputs.version }}
           
       - name: Create release
+        if: github.event.inputs.dry_run != 'true'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.prepare-release.outputs.tag }}
@@ -278,21 +312,26 @@ jobs:
     name: Update Action.yml
     runs-on: ubuntu-latest
     needs: [create-release]
+    timeout-minutes: 15
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         
       - name: Update action.yml with new version
+        if: github.event.inputs.dry_run != 'true'
         run: |
           # Update the action.yml to use the new version
-          sed -i "s|uses: .*@.*|uses: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.prepare-release.outputs.version }}|" action.yml
+          sed -i "s|uses: .*@.*|uses: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.prepare-release.outputs.version }}|" action/action.yml
           
       - name: Commit and push changes
+        if: github.event.inputs.dry_run != 'true'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add action.yml
+          git add action/action.yml
           git commit -m "chore: update action.yml to version ${{ needs.prepare-release.outputs.version }}" || echo "No changes to commit"
           git push
 
@@ -301,6 +340,7 @@ jobs:
     name: Notify Release
     runs-on: ubuntu-latest
     needs: [create-release]
+    timeout-minutes: 10
     if: always()
     
     steps:

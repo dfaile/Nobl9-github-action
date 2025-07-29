@@ -79,7 +79,7 @@ jobs:
         id: current-version
         run: |
           # Extract current version from version.go
-          CURRENT_VERSION=$(grep -o 'Version = "[^"]*"' version/version.go | cut -d'"' -f2)
+          CURRENT_VERSION=$(grep -o 'Version = "[^"]*"' action/version/version.go | cut -d'"' -f2)
           if [ -z "$CURRENT_VERSION" ]; then
             CURRENT_VERSION="v0.0.0"
           fi
