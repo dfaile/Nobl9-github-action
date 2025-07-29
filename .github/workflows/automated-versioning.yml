@@ -309,17 +309,17 @@ jobs:
       - name: Update version in action.yml
         run: |
           # Update version in action.yml if it exists
-          if [ -f "action/action.yml" ]; then
-            sed -i "s/uses: .*@[^[:space:]]*/uses: .*@${{ needs.analyze-commits.outputs.next-version }}/" action/action.yml
-            echo "Updated version in action/action.yml"
+          if [ -f "action.yml" ]; then
+            sed -i "s/uses: .*@[^[:space:]]*/uses: .*@${{ needs.analyze-commits.outputs.next-version }}/" action.yml
+            echo "Updated version in action.yml"
           fi
           
       - name: Update version in Dockerfile
         run: |
           # Update version in Dockerfile if it exists
-          if [ -f "action/Dockerfile" ]; then
-            sed -i "s/LABEL version=\"[^\"]*\"/LABEL version=\"${{ needs.analyze-commits.outputs.next-version }}\"/" action/Dockerfile
-            echo "Updated version in action/Dockerfile"
+          if [ -f "Dockerfile" ]; then
+            sed -i "s/LABEL version=\"[^\"]*\"/LABEL version=\"${{ needs.analyze-commits.outputs.next-version }}\"/" Dockerfile
+            echo "Updated version in Dockerfile"
           fi
           
       - name: Verify version updates
@@ -336,8 +336,8 @@ jobs:
           fi
           
           # Check action.yml if it exists
-          if [ -f "action/action.yml" ]; then
-            if grep -q "${{ needs.analyze-commits.outputs.next-version }}" action/action.yml; then
+          if [ -f "action.yml" ]; then
+            if grep -q "${{ needs.analyze-commits.outputs.next-version }}" action.yml; then
               echo "✅ Version updated in action.yml"
             else
               echo "❌ Version not updated in action.yml"
@@ -457,70 +457,19 @@ jobs:
           
       - name: Create GitHub release
         if: github.event.inputs.dry_run != 'true'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.analyze-commits.outputs.next-version }}
-          release_name: Release ${{ needs.analyze-commits.outputs.next-version }}
+          name: Release ${{ needs.analyze-commits.outputs.next-version }}
           body: ${{ steps.release-notes.outputs.release-notes }}
           draft: false
           prerelease: false
-          
-      - name: Upload release assets
-        if: github.event.inputs.dry_run != 'true'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: ./nobl9-action-linux-amd64
-          asset_name: nobl9-action-linux-amd64
-          asset_content_type: application/octet-stream
-          
-      - name: Upload release assets (continued)
-        if: github.event.inputs.dry_run != 'true'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: ./nobl9-action-linux-arm64
-          asset_name: nobl9-action-linux-arm64
-          asset_content_type: application/octet-stream
-          
-      - name: Upload release assets (continued 2)
-        if: github.event.inputs.dry_run != 'true'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: ./nobl9-action-darwin-amd64
-          asset_name: nobl9-action-darwin-amd64
-          asset_content_type: application/octet-stream
-          
-      - name: Upload release assets (continued 3)
-        if: github.event.inputs.dry_run != 'true'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: ./nobl9-action-darwin-arm64
-          asset_name: nobl9-action-darwin-arm64
-          asset_content_type: application/octet-stream
-          
-      - name: Upload release assets (continued 4)
-        if: github.event.inputs.dry_run != 'true'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: ./nobl9-action-windows-amd64.exe
-          asset_name: nobl9-action-windows-amd64.exe
-          asset_content_type: application/octet-stream
+          files: |
+            nobl9-action-linux-amd64
+            nobl9-action-linux-arm64
+            nobl9-action-darwin-amd64
+            nobl9-action-darwin-arm64
+            nobl9-action-windows-amd64.exe
 
   # Generate version summary report
   version-summary:
@@ -596,8 +545,4 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: summary
-<<<<<<< HEAD
-            }); 
-=======
-            }); 
->>>>>>> 6bafc33cc1c096dab7d12f133684d3cbf2ac25d7
+            });

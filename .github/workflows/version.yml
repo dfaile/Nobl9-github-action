@@ -47,11 +47,7 @@ jobs:
           cache: true
           
       - name: Install conventional-changelog
-<<<<<<< HEAD
         run: npm install -g conventional-changelog-cli@4.2.2
-=======
-        run: npm install -g conventional-changelog-cli
->>>>>>> 6bafc33cc1c096dab7d12f133684d3cbf2ac25d7
           
       - name: Analyze commit messages
         id: analyze
@@ -145,11 +141,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Install conventional-changelog
-<<<<<<< HEAD
         run: npm install -g conventional-changelog-cli@4.2.2
-=======
-        run: npm install -g conventional-changelog-cli
->>>>>>> 6bafc33cc1c096dab7d12f133684d3cbf2ac25d7
           
       - name: Generate changelog
         run: |
@@ -346,8 +338,4 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: summary
-<<<<<<< HEAD
-            }); 
-=======
-            }); 
->>>>>>> 6bafc33cc1c096dab7d12f133684d3cbf2ac25d7
+            });
