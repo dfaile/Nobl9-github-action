@@ -596,4 +596,8 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: summary
+<<<<<<< HEAD
             }); 
+=======
+            }); 
+>>>>>>> 6bafc33cc1c096dab7d12f133684d3cbf2ac25d7
