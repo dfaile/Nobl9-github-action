@@ -1,0 +1,240 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: nobl9-project-template
+  title: Create Nobl9 Project
+  description: Create a new Nobl9 project with user role assignments through a simple form interface. This template enables self-service project creation and automated role management for Nobl9 monitoring and SLO management.
+  tags:
+    - nobl9
+    - project
+    - sre
+    - monitoring
+    - slo
+    - observability
+    - gitops
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: your-org/nobl9-projects
+    backstage.io/source-location: https://github.com/your-org/nobl9-projects
+spec:
+  owner: platform-team
+  type: service
+
+  # Form parameters that will be rendered in the frontend
+  parameters:
+    - title: Project Information
+      required:
+        - projectName
+        - displayName
+      properties:
+        projectName:
+          title: Project Name
+          type: string
+          description: Unique name for the Nobl9 project (must follow DNS RFC1123 standards - lowercase letters, numbers, and hyphens only, 1-63 characters)
+          pattern: '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'
+          minLength: 1
+          maxLength: 63
+          ui:autofocus: true
+          ui:field: TextField
+          ui:options:
+            rows: 1
+            placeholder: "my-project-name"
+          ui:validation:
+            pattern: "Project name must contain only lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen"
+        displayName:
+          title: Display Name
+          type: string
+          description: Human-readable name for the project (will be shown in Nobl9 dashboard)
+          minLength: 1
+          maxLength: 63
+          ui:field: TextField
+          ui:options:
+            rows: 1
+            placeholder: "My Project Name"
+        description:
+          title: Description
+          type: string
+          description: Optional description of the project (helps identify the project's purpose)
+          ui:field: TextField
+          ui:options:
+            rows: 3
+            placeholder: "Describe the purpose of this project..."
+
+    - title: User Management
+      required:
+        - users
+      properties:
+        users:
+          title: Project Users
+          type: array
+          description: Add users and assign roles to this project. You can assign roles to yourself and others. At least one project owner is required.
+          items:
+            type: object
+            required:
+              - email
+              - role
+            properties:
+              email:
+                title: Email Address
+                type: string
+                description: User's email address (must be a valid Nobl9 user with Okta integration)
+                format: email
+                pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                ui:field: TextField
+                ui:options:
+                  rows: 1
+                  placeholder: "user@company.com"
+                ui:validation:
+                  pattern: "Please enter a valid email address"
+              role:
+                title: Role
+                type: string
+                description: User's role in the project. Project owners have full access, editors can manage SLOs and services.
+                enum:
+                  - project-owner
+                  - project-editor
+                default: project-editor
+                ui:field: Select
+                ui:options:
+                  enumOptions:
+                    - value: project-owner
+                      label: Project Owner (Full Access)
+                    - value: project-editor
+                      label: Project Editor (Manage SLOs & Services)
+          ui:options:
+            orderable: false
+            addable: true
+            removable: true
+            minItems: 1
+            addButtonText: "+ Add User"
+            removeButtonText: "Remove User"
+
+  # Steps that will be executed in series
+  steps:
+    - id: validate-users
+      name: Validate User Input
+      action: debug:log
+      input:
+        message: |
+          Validating user input:
+          - Checking for at least one project owner
+          - Validating email addresses
+          - Ensuring no duplicate emails
+          - Verifying project name format
+
+    - id: validate-project-owner
+      name: Validate Project Owner Requirement
+      action: debug:log
+      input:
+        message: |
+          {% set hasOwner = false %}
+          {% for user in parameters.users %}
+            {% if user.role == 'project-owner' %}
+              {% set hasOwner = true %}
+            {% endif %}
+          {% endfor %}
+          {% if hasOwner %}
+            ✅ At least one project owner is specified
+          {% else %}
+            ❌ Error: At least one project owner must be specified
+          {% endif %}
+
+    - id: validate-email-duplicates
+      name: Validate Email Duplicates
+      action: debug:log
+      input:
+        message: |
+          {% set emails = [] %}
+          {% set duplicates = [] %}
+          {% for user in parameters.users %}
+            {% if user.email in emails %}
+              {% set duplicates = duplicates + [user.email] %}
+            {% else %}
+              {% set emails = emails + [user.email] %}
+            {% endif %}
+          {% endfor %}
+          {% if duplicates | length > 0 %}
+            ❌ Error: Duplicate email addresses found: {{ duplicates | join(', ') }}
+          {% else %}
+            ✅ No duplicate email addresses found
+          {% endif %}
+
+    - id: generate-nobl9-yaml
+      name: Generate Nobl9 YAML
+      action: fetch:template
+      input:
+        url: ./template
+        values:
+          projectName: ${{ parameters.projectName }}
+          displayName: ${{ parameters.displayName }}
+          description: ${{ parameters.description }}
+          users: ${{ parameters.users }}
+
+    - id: create-project-directory
+      name: Create Project Directory
+      action: debug:log
+      input:
+        message: |
+          Creating project directory structure for ${{ parameters.projectName }}
+          - Directory: projects/${{ parameters.projectName }}/
+          - Files: nobl9-project.yaml, catalog-info.yaml, README.md
+
+    - id: publish-to-github
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        repoUrl: https://github.com/your-org/nobl9-projects
+        description: |
+          Nobl9 project configuration for ${{ parameters.projectName }}
+          
+          Generated by Backstage template with:
+          - Project: ${{ parameters.projectName }}
+          - Display Name: ${{ parameters.displayName }}
+          - Users: {{ parameters.users | length }} users assigned
+          - Created: {{ now | date("2006-01-02 15:04:05") }}
+        defaultBranch: main
+        sourcePath: ./template
+        commitMessage: |
+          feat: Add Nobl9 project configuration for ${{ parameters.projectName }}
+          
+          - Project: ${{ parameters.projectName }}
+          - Display Name: ${{ parameters.displayName }}
+          - Users: {{ parameters.users | length }} users assigned
+          - Generated by Backstage template
+
+    - id: register-catalog
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish-to-github'].output.repoContentsUrl }}
+        catalogInfoPath: '/catalog-info.yaml'
+
+  # Outputs that will be shown after template execution
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps['publish-to-github'].output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps['register-catalog'].output.entityRef }}
+    text:
+      - title: Next Steps
+        content: |
+          Your Nobl9 project has been created successfully!
+          
+          **Project Name:** `${{ parameters.projectName }}`
+          **Repository:** ${{ steps['publish-to-github'].output.remoteUrl }}
+          **Branch:** main
+          **Files Created:**
+          - `projects/${{ parameters.projectName }}/nobl9-project.yaml`
+          - `projects/${{ parameters.projectName }}/catalog-info.yaml`
+          - `projects/${{ parameters.projectName }}/README.md`
+          
+          The GitHub Action will automatically process the YAML configuration and create the project in Nobl9. You can monitor the progress in the GitHub Actions tab.
+          
+          **What happens next:**
+          1. GitHub Action detects the new YAML files
+          2. Action validates the Nobl9 configuration
+          3. Action resolves email addresses to Okta User IDs
+          4. Action creates/updates the project and role bindings in Nobl9
+          5. Action provides detailed logs of the deployment process 

@@ -1,0 +1,246 @@
+version: 2
+updates:
+  # Go modules
+  - package-ecosystem: "gomod"
+    directory: "/action"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "@owner"
+    assignees:
+      - "@owner"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "go"
+    ignore:
+      # Ignore major version updates for critical dependencies
+      - dependency-name: "github.com/nobl9/nobl9-go"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "github.com/spf13/cobra"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "github.com/spf13/viper"
+        update-types: ["version-update:semver-major"]
+    # Group minor and patch updates together
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Allow up to 5 open PRs for Go dependencies
+    open-pull-requests-limit: 5
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "@owner"
+    assignees:
+      - "@owner"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    ignore:
+      # Ignore major version updates for critical actions
+      - dependency-name: "actions/checkout"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "actions/setup-go"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "actions/setup-node"
+        update-types: ["version-update:semver-major"]
+    # Group minor and patch updates
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/action"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "@owner"
+    assignees:
+      - "@owner"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+    ignore:
+      # Ignore major version updates for base images
+      - dependency-name: "golang"
+        update-types: ["version-update:semver-major"]
+    # Group minor and patch updates
+    groups:
+      docker-images:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # npm (for development dependencies)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "@owner"
+    assignees:
+      - "@owner"
+    commit-message:
+      prefix: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "npm"
+      - "dev-dependencies"
+    ignore:
+      # Ignore major version updates for development tools
+      - dependency-name: "@backstage/cli"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "conventional-changelog-cli"
+        update-types: ["version-update:semver-major"]
+    # Group minor and patch updates
+    groups:
+      npm-dev-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Security updates (high priority)
+  - package-ecosystem: "gomod"
+    directory: "/action"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "@owner"
+    assignees:
+      - "@owner"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "high-priority"
+    # Only security updates
+    update-types:
+      - "security"
+    # Don't group security updates - handle each individually
+    groups: {}
+
+  # Security updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "@owner"
+    assignees:
+      - "@owner"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "high-priority"
+      - "github-actions"
+    # Only security updates
+    update-types:
+      - "security"
+    # Don't group security updates
+    groups: {}
+
+  # Security updates for Docker
+  - package-ecosystem: "docker"
+    directory: "/action"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "@owner"
+    assignees:
+      - "@owner"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "high-priority"
+      - "docker"
+    # Only security updates
+    update-types:
+      - "security"
+    # Don't group security updates
+    groups: {}
+
+  # npm security updates
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "@owner"
+    assignees:
+      - "@owner"
+    commit-message:
+      prefix: "security"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "high-priority"
+      - "npm"
+    # Only security updates
+    update-types:
+      - "security"
+    # Don't group security updates
+    groups: {} 

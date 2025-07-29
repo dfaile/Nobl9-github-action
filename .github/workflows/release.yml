@@ -1,0 +1,370 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+      release_type:
+        description: 'Type of release'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      dry_run:
+        description: 'Dry run (no actual release)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Determine version and create release
+  prepare-release:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      release_notes: ${{ steps.release-notes.outputs.content }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+          
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual release with specified version
+            VERSION="${{ github.event.inputs.version }}"
+            if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+              echo "Error: Version must be in format vX.Y.Z"
+              exit 1
+            fi
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          else
+            # Tag-based release
+            VERSION="${GITHUB_REF#refs/tags/}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "Releasing version: $VERSION"
+          
+      - name: Generate changelog
+        id: release-notes
+        run: |
+          # Install conventional-changelog-cli
+          npm install -g conventional-changelog-cli
+          
+          # Generate changelog
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # For manual releases, generate changelog since last tag
+            CHANGELOG=$(conventional-changelog -p angular --release-count 0 --output-format json | jq -r '.[0].body' || echo "## Changes\n- Initial release")
+          else
+            # For tag-based releases, generate changelog for the specific version
+            CHANGELOG=$(conventional-changelog -p angular --release-count 1 --output-format json | jq -r '.[0].body' || echo "## Changes\n- Release ${{ steps.version.outputs.version }}")
+          fi
+          
+          # Escape newlines for GitHub output
+          CHANGELOG_ESCAPED=$(echo "$CHANGELOG" | sed ':a;N;$!ba;s/\n/\\n/g')
+          echo "content=$CHANGELOG_ESCAPED" >> $GITHUB_OUTPUT
+          
+      - name: Update version in code
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION_NUMBER="${VERSION#v}"
+          
+          # Update version.go
+          sed -i "s/Version = \".*\"/Version = \"$VERSION_NUMBER\"/" version/version.go
+          
+          # Update action.yml
+          sed -i "s/uses: .*@.*/uses: ${{ env.REGISTRY }}\/${{ env.IMAGE_NAME }}@$VERSION/" action.yml
+          
+          # Update Dockerfile labels
+          sed -i "s/LABEL version=\".*\"/LABEL version=\"$VERSION_NUMBER\"/" Dockerfile
+          
+      - name: Commit version changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}" || echo "No changes to commit"
+          
+      - name: Create and push tag
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}
+
+  # Build and test the action
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: [prepare-release]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+          
+      - name: Run tests
+        run: |
+          go test -v -race -coverprofile=coverage.out ./...
+          
+      - name: Build action
+        run: |
+          # Build for multiple platforms
+          GOOS=linux GOARCH=amd64 go build -o nobl9-action-linux-amd64 ./cmd/main.go
+          GOOS=linux GOARCH=arm64 go build -o nobl9-action-linux-arm64 ./cmd/main.go
+          GOOS=darwin GOARCH=amd64 go build -o nobl9-action-darwin-amd64 ./cmd/main.go
+          GOOS=darwin GOARCH=arm64 go build -o nobl9-action-darwin-arm64 ./cmd/main.go
+          
+      - name: Test Docker build
+        run: |
+          docker build -t nobl9-action:test .
+          docker run --rm nobl9-action:test --help
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: action-binaries-${{ needs.prepare-release.outputs.version }}
+          path: |
+            nobl9-action-*
+          retention-days: 30
+
+  # Build and push Docker image
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [prepare-release, build-and-test]
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ needs.prepare-release.outputs.version }}
+          
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          
+      - name: Verify image
+        run: |
+          # Pull and test the built image
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare-release.outputs.version }}
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare-release.outputs.version }} --version
+
+  # Create GitHub release
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [prepare-release, build-and-push]
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: action-binaries-${{ needs.prepare-release.outputs.version }}
+          
+      - name: Create release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.tag }}
+          release_name: Release ${{ needs.prepare-release.outputs.version }}
+          body: |
+            ${{ needs.prepare-release.outputs.release_notes }}
+            
+            ## Installation
+            
+            ```yaml
+            - name: Deploy to Nobl9
+              uses: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.prepare-release.outputs.version }}
+              with:
+                client-id: ${{ secrets.NOBL9_CLIENT_ID }}
+                client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
+            ```
+            
+            ## Docker Image
+            
+            ```bash
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare-release.outputs.version }}
+            ```
+            
+            ## Binary Downloads
+            
+            The following binaries are available for direct download:
+            
+            - [nobl9-action-linux-amd64](https://github.com/${{ github.repository }}/releases/download/${{ needs.prepare-release.outputs.tag }}/nobl9-action-linux-amd64)
+            - [nobl9-action-linux-arm64](https://github.com/${{ github.repository }}/releases/download/${{ needs.prepare-release.outputs.tag }}/nobl9-action-linux-arm64)
+            - [nobl9-action-darwin-amd64](https://github.com/${{ github.repository }}/releases/download/${{ needs.prepare-release.outputs.tag }}/nobl9-action-darwin-amd64)
+            - [nobl9-action-darwin-arm64](https://github.com/${{ github.repository }}/releases/download/${{ needs.prepare-release.outputs.tag }}/nobl9-action-darwin-arm64)
+          draft: false
+          prerelease: false
+          
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./nobl9-action-linux-amd64
+          asset_name: nobl9-action-linux-amd64
+          asset_content_type: application/octet-stream
+          
+      - name: Upload release assets (ARM64)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./nobl9-action-linux-arm64
+          asset_name: nobl9-action-linux-arm64
+          asset_content_type: application/octet-stream
+          
+      - name: Upload release assets (Darwin AMD64)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./nobl9-action-darwin-amd64
+          asset_name: nobl9-action-darwin-amd64
+          asset_content_type: application/octet-stream
+          
+      - name: Upload release assets (Darwin ARM64)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./nobl9-action-darwin-arm64
+          asset_name: nobl9-action-darwin-arm64
+          asset_content_type: application/octet-stream
+
+  # Update action.yml with new version
+  update-action-yml:
+    name: Update Action.yml
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Update action.yml with new version
+        run: |
+          # Update the action.yml to use the new version
+          sed -i "s|uses: .*@.*|uses: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.prepare-release.outputs.version }}|" action.yml
+          
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add action.yml
+          git commit -m "chore: update action.yml to version ${{ needs.prepare-release.outputs.version }}" || echo "No changes to commit"
+          git push
+
+  # Notify stakeholders
+  notify-release:
+    name: Notify Release
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    if: always()
+    
+    steps:
+      - name: Create release summary
+        run: |
+          echo "# Release Summary" > release-summary.md
+          echo "" >> release-summary.md
+          echo "## Version: ${{ needs.prepare-release.outputs.version }}" >> release-summary.md
+          echo "## Tag: ${{ needs.prepare-release.outputs.tag }}" >> release-summary.md
+          echo "## Docker Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare-release.outputs.version }}" >> release-summary.md
+          echo "" >> release-summary.md
+          echo "## Release Notes:" >> release-summary.md
+          echo "${{ needs.prepare-release.outputs.release_notes }}" >> release-summary.md
+          
+      - name: Upload release summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-summary-${{ needs.prepare-release.outputs.version }}
+          path: release-summary.md
+          
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ Release ${{ needs.prepare-release.outputs.version }} completed successfully!"
+          echo "Docker image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare-release.outputs.version }}"
+          echo "GitHub release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare-release.outputs.tag }}"
+          
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Release ${{ needs.prepare-release.outputs.version }} failed!"
+          echo "Please check the workflow logs for details." 

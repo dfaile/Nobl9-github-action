@@ -1,0 +1,112 @@
+name: 'Nobl9 Project Sync'
+description: 'Process Nobl9 YAML configurations and deploy projects and role bindings to Nobl9'
+
+author: 'Your Organization'
+
+# Inputs that the action accepts
+inputs:
+  # Nobl9 API credentials (required)
+  client-id:
+    description: 'Nobl9 API client ID'
+    required: true
+    sensitive: true
+  
+  client-secret:
+    description: 'Nobl9 API client secret'
+    required: true
+    sensitive: true
+  
+  # Repository configuration
+  repo-path:
+    description: 'Repository path to scan for Nobl9 YAML files'
+    required: false
+    default: '.'
+  
+  file-pattern:
+    description: 'File pattern to match Nobl9 YAML files (glob pattern)'
+    required: false
+    default: '**/*.yaml'
+  
+  # Processing options
+  dry-run:
+    description: 'Perform dry run without making changes to Nobl9'
+    required: false
+    default: 'false'
+  
+  force:
+    description: 'Force processing even if validation fails'
+    required: false
+    default: 'false'
+  
+  # Logging configuration
+  log-level:
+    description: 'Log level (debug, info, warn, error)'
+    required: false
+    default: 'info'
+  
+  log-format:
+    description: 'Log format (json, text)'
+    required: false
+    default: 'json'
+  
+  # Validation mode
+  validate-only:
+    description: 'Only validate YAML files without deploying to Nobl9'
+    required: false
+    default: 'false'
+
+# Outputs that the action provides
+outputs:
+  processed-files:
+    description: 'Number of Nobl9 YAML files processed'
+  
+  projects-created:
+    description: 'Number of projects created in Nobl9'
+  
+  projects-updated:
+    description: 'Number of projects updated in Nobl9'
+  
+  role-bindings-created:
+    description: 'Number of role bindings created in Nobl9'
+  
+  role-bindings-updated:
+    description: 'Number of role bindings updated in Nobl9'
+  
+  users-resolved:
+    description: 'Number of email addresses resolved to Okta User IDs'
+  
+  errors:
+    description: 'Number of errors encountered during processing'
+  
+  success:
+    description: 'Whether the action completed successfully'
+
+# Branding for the action
+branding:
+  icon: 'database'
+  color: 'blue'
+
+# Runs configuration
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - 'process'
+    - '--client-id'
+    - '${{ inputs.client-id }}'
+    - '--client-secret'
+    - '${{ inputs.client-secret }}'
+    - '--repo-path'
+    - '${{ inputs.repo-path }}'
+    - '--file-pattern'
+    - '${{ inputs.file-pattern }}'
+    - '--log-level'
+    - '${{ inputs.log-level }}'
+    - '--log-format'
+    - '${{ inputs.log-format }}'
+    - '--dry-run'
+    - '${{ inputs.dry-run }}'
+    - '--force'
+    - '${{ inputs.force }}'
+    - '--validate-only'
+    - '${{ inputs.validate-only }}' 

@@ -1,0 +1,8 @@
+apiVersion: n9/v1alpha
+kind: Project
+metadata:
+  name: test-project
+  displayName: Test Project
+  description: A test project for local development
+spec:
+  description: Test project created during local development
