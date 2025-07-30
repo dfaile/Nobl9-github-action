@@ -35,7 +35,7 @@ on:
         type: boolean
 
 env:
-  BACKSTAGE_VERSION: '1.25.0'
+  BACKSTAGE_VERSION: '0.33.1'
   NODE_VERSION: '18'
   TEST_TIMEOUT: '45m'
 

@@ -48,7 +48,7 @@ jobs:
           cache-dependency-path: action/go.sum
           
       - name: Install conventional-changelog
-        run: npm install -g conventional-changelog-cli@4.2.2
+        run: npm install -g conventional-changelog-cli@5.0.0
           
       - name: Analyze commit messages
         id: analyze
@@ -142,7 +142,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Install conventional-changelog
-        run: npm install -g conventional-changelog-cli@4.2.2
+        run: npm install -g conventional-changelog-cli@5.0.0
           
       - name: Generate changelog
         run: |

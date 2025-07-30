@@ -73,7 +73,7 @@ jobs:
           
       - name: Install conventional-changelog-cli
         run: |
-          npm install -g conventional-changelog-cli@4.2.2
+          npm install -g conventional-changelog-cli@5.0.0
           
       - name: Get current version
         id: current-version
@@ -220,7 +220,7 @@ jobs:
           
       - name: Install conventional-changelog-cli
         run: |
-          npm install -g conventional-changelog-cli@4.2.2
+          npm install -g conventional-changelog-cli@5.0.0
           
       - name: Configure Git
         run: |
