@@ -1,0 +1,102 @@
+name: Template Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'template/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'template/**'
+
+jobs:
+  validate-template:
+    name: Validate Template
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python for yamllint
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+        
+    - name: Install yamllint
+      run: pip install yamllint
+      
+    - name: Validate YAML syntax
+      run: |
+        # Find all YAML files and validate them
+        YAML_FILES=$(find template/ -name "*.yaml" -o -name "*.yml" 2>/dev/null || true)
+        if [ -n "$YAML_FILES" ]; then
+          echo "$YAML_FILES" | xargs yamllint -d relaxed
+        else
+          echo "No YAML files found in template directory"
+        fi
+        
+    - name: Check required template files
+      run: |
+        # Check for main template file
+        if [ ! -f "template/template.yaml" ]; then
+          echo "❌ Missing template/template.yaml"
+          exit 1
+        fi
+        echo "✅ template.yaml exists"
+        
+        # Check for template content
+        if [ ! -d "template/template" ]; then
+          echo "❌ Missing template/template directory"
+          exit 1
+        fi
+        echo "✅ template directory exists"
+        
+    - name: Validate template structure
+      run: |
+        # Check template.yaml has required sections
+        REQUIRED_SECTIONS=("apiVersion" "kind" "metadata" "spec")
+        
+        for section in "${REQUIRED_SECTIONS[@]}"; do
+          if grep -q "$section:" template/template.yaml; then
+            echo "✅ Found section: $section"
+          else
+            echo "❌ Missing section: $section"
+            exit 1
+          fi
+        done
+        
+    - name: Test template parameter validation
+      run: |
+        # Simple test to check if template has parameters section
+        if grep -q "parameters:" template/template.yaml; then
+          echo "✅ Template has parameters section"
+        else
+          echo "⚠️  Template missing parameters section"
+        fi
+        
+        # Check for common required parameters
+        COMMON_PARAMS=("projectName" "projectOwner")
+        for param in "${COMMON_PARAMS[@]}"; do
+          if grep -q "$param" template/template.yaml; then
+            echo "✅ Found parameter: $param"
+          else
+            echo "⚠️  Missing recommended parameter: $param"
+          fi
+        done
+        
+    - name: Validate generated template files
+      run: |
+        # Check that template files exist and are valid YAML
+        if [ -d "template/template" ]; then
+          for file in template/template/*.yaml; do
+            if [ -f "$file" ]; then
+              echo "Validating $file"
+              yamllint -d relaxed "$file"
+              echo "✅ $file is valid"
+            fi
+          done
+        else
+          echo "⚠️  template/template directory not found"
+        fi

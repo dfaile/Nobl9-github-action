@@ -1,0 +1,130 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+        cache-dependency-path: action/go.sum
+        
+    - name: Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.tag }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+        
+    - name: Build binaries
+      run: |
+        cd action
+        mkdir -p ../dist
+        
+        # Build for multiple platforms
+        GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ../dist/nobl9-action-linux-amd64 ./cmd/main.go
+        GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o ../dist/nobl9-action-linux-arm64 ./cmd/main.go
+        GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o ../dist/nobl9-action-darwin-amd64 ./cmd/main.go
+        GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o ../dist/nobl9-action-darwin-arm64 ./cmd/main.go
+        GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ../dist/nobl9-action-windows-amd64.exe ./cmd/main.go
+        
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./action
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Simple changelog from git log
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -n "$PREVIOUS_TAG" ]; then
+          CHANGELOG=$(git log --pretty=format:"- %s" $PREVIOUS_TAG..HEAD)
+        else
+          CHANGELOG="- Initial release"
+        fi
+        
+        {
+          echo "changelog<<EOF"
+          echo "$CHANGELOG"
+          echo "EOF"
+        } >> $GITHUB_OUTPUT
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        name: Release ${{ steps.version.outputs.version }}
+        body: |
+          ## What's Changed
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ## Docker Image
+          ```bash
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          ```
+          
+          ## Usage
+          ```yaml
+          - name: Deploy to Nobl9
+            uses: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.version.outputs.version }}
+            with:
+              client-id: ${{ secrets.NOBL9_CLIENT_ID }}
+              client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
+          ```
+        draft: false
+        prerelease: false
+        files: |
+          dist/nobl9-action-linux-amd64
+          dist/nobl9-action-linux-arm64
+          dist/nobl9-action-darwin-amd64
+          dist/nobl9-action-darwin-arm64
+          dist/nobl9-action-windows-amd64.exe
