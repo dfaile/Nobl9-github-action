@@ -36,7 +36,7 @@ jobs:
         cache: true
         cache-dependency-path: action/go.sum
         
-    - name: Get version
+    - name: Get version and image name
       id: version
       run: |
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -46,6 +46,11 @@ jobs:
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
+        
+        # Convert repository name to lowercase for Docker
+        IMAGE_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+        echo "Image name: $IMAGE_NAME"
         
     - name: Build binaries
       run: |
@@ -76,8 +81,8 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: true
         tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          ${{ env.REGISTRY }}/${{ steps.version.outputs.image_name }}:latest
+          ${{ env.REGISTRY }}/${{ steps.version.outputs.image_name }}:${{ steps.version.outputs.version }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         
@@ -109,13 +114,13 @@ jobs:
           
           ## Docker Image
           ```bash
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          docker pull ${{ env.REGISTRY }}/${{ steps.version.outputs.image_name }}:${{ steps.version.outputs.version }}
           ```
           
           ## Usage
           ```yaml
           - name: Deploy to Nobl9
-            uses: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.version.outputs.version }}
+            uses: ${{ env.REGISTRY }}/${{ steps.version.outputs.image_name }}@${{ steps.version.outputs.version }}
             with:
               client-id: ${{ secrets.NOBL9_CLIENT_ID }}
               client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
