@@ -198,10 +198,8 @@ func (l *Logger) LogDetailedError(err error, operation string, context map[strin
 	}
 
 	// Add context information
-	if context != nil {
-		for k, v := range context {
-			baseFields["context_"+k] = v
-		}
+	for k, v := range context {
+		baseFields["context_"+k] = v
 	}
 
 	// Merge additional fields

@@ -18,7 +18,7 @@ func TestNewResolver(t *testing.T) {
 	resolver := New(client, log)
 
 	if resolver == nil {
-		t.Error("expected resolver to be created")
+		t.Fatal("expected resolver to be created")
 	}
 
 	if resolver.client != client {
@@ -39,7 +39,7 @@ func TestNewUserCache(t *testing.T) {
 	cache := NewUserCache(ttl)
 
 	if cache == nil {
-		t.Error("expected cache to be created")
+		t.Fatal("expected cache to be created")
 	}
 
 	if cache.ttl != ttl {
@@ -67,7 +67,7 @@ func TestUserCacheOperations(t *testing.T) {
 
 	retrieved := cache.Get(email)
 	if retrieved == nil {
-		t.Error("expected user to be retrieved from cache")
+		t.Fatal("expected user to be retrieved from cache")
 	}
 
 	if retrieved.Email != email {

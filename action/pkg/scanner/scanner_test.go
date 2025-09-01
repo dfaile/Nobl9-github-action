@@ -14,11 +14,11 @@ func TestNewScanner(t *testing.T) {
 	scanner := New(log)
 
 	if scanner == nil {
-		t.Error("expected scanner to be created")
+		t.Fatal("expected scanner to be created")
 	}
 
 	if scanner.logger != log {
-		t.Error("expected logger to be set")
+		t.Error("expected scanner to be set")
 	}
 }
 

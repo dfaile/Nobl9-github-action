@@ -18,7 +18,7 @@ func TestNewProcessor(t *testing.T) {
 	processor := New(client, log)
 
 	if processor == nil {
-		t.Error("expected processor to be created")
+		t.Fatal("expected processor to be created")
 	}
 
 	if processor.client != client {

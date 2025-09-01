@@ -18,7 +18,7 @@ func TestNewParser(t *testing.T) {
 	parser := New(client, log)
 
 	if parser == nil {
-		t.Error("expected parser to be created")
+		t.Fatal("expected parser to be created")
 	}
 
 	if parser.client != client {

@@ -77,8 +77,12 @@ func init() {
 	validateCmd.Flags().StringVar(&config.LogFormat, "log-format", "json", "Log format (json, text)")
 
 	// Mark required flags
-	processCmd.MarkFlagRequired("client-id")
-	processCmd.MarkFlagRequired("client-secret")
+	if err := processCmd.MarkFlagRequired("client-id"); err != nil {
+		logrus.WithError(err).Fatal("Failed to mark client-id as required")
+	}
+	if err := processCmd.MarkFlagRequired("client-secret"); err != nil {
+		logrus.WithError(err).Fatal("Failed to mark client-secret as required")
+	}
 }
 
 // setupLogging configures the logging system
