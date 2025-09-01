@@ -93,14 +93,14 @@ jobs:
         path: ./
         base: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || 'HEAD~1' }}
         head: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'HEAD' }}
-        extra_args: --debug --only-verified --no-update
+        extra_args: --debug --only-verified
       if: steps.commit-check.outputs.can_diff == 'true'
       
     - name: Run TruffleHog (Full Repository Scan)
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
-        extra_args: --debug --only-verified --no-update
+        extra_args: --debug --only-verified
       if: steps.commit-check.outputs.can_diff == 'false'
       
     - name: Handle TruffleHog errors gracefully
