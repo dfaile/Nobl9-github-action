@@ -119,15 +119,9 @@ func TestLoggerWithField(t *testing.T) {
 func TestLoggerWithContext(t *testing.T) {
 	logger := New(LevelInfo, FormatJSON)
 
-	// Define custom context key types to avoid staticcheck warnings
-	type contextKey string
-	const (
-		requestIDKey     contextKey = "request_id"
-		correlationIDKey contextKey = "correlation_id"
-	)
-
-	ctx := context.WithValue(context.Background(), requestIDKey, "req-123")
-	ctx = context.WithValue(ctx, correlationIDKey, "corr-456")
+	// Use the same context key types defined in the logger package
+	ctx := context.WithValue(context.Background(), RequestIDKey, "req-123")
+	ctx = context.WithValue(ctx, CorrelationIDKey, "corr-456")
 
 	newLogger := logger.WithContext(ctx)
 

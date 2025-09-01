@@ -17,6 +17,14 @@ type Logger struct {
 // Fields type for structured logging
 type Fields map[string]interface{}
 
+// ContextKey represents context key types for type safety
+type ContextKey string
+
+const (
+	RequestIDKey     ContextKey = "request_id"
+	CorrelationIDKey ContextKey = "correlation_id"
+)
+
 // Level represents log levels
 type Level string
 
@@ -117,12 +125,12 @@ func (l *Logger) WithContext(ctx context.Context) *Logger {
 	// Extract useful context information
 	if ctx != nil {
 		// Add request ID if available
-		if requestID := ctx.Value("request_id"); requestID != nil {
+		if requestID := ctx.Value(RequestIDKey); requestID != nil {
 			fields["request_id"] = requestID
 		}
 
 		// Add correlation ID if available
-		if correlationID := ctx.Value("correlation_id"); correlationID != nil {
+		if correlationID := ctx.Value(CorrelationIDKey); correlationID != nil {
 			fields["correlation_id"] = correlationID
 		}
 	}
