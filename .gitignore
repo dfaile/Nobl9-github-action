@@ -86,7 +86,6 @@ test-workflows.sh
 Dockerfile.runner
 
 # Local testing documentation
-ACT_TESTING_GUIDE.md
 
 # Setup and publishing documentation
 GITHUB_SETUP_COMPLETE.md
