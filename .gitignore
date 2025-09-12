@@ -87,4 +87,8 @@ Dockerfile.runner
 
 # Local testing documentation
 ACT_TESTING_GUIDE.md
-WORKFLOW_FIXES_SUMMARY.md 
+WORKFLOW_FIXES_SUMMARY.md
+
+# Setup and publishing documentation
+GITHUB_SETUP_COMPLETE.md
+PUBLISHING_CHECKLIST.md 
