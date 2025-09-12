@@ -14,19 +14,19 @@ jobs:
   validate-template:
     name: Validate Template
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Set up Python for yamllint
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
-        
+        python-version: '3.11'
+
     - name: Install yamllint
       run: pip install yamllint
-      
+
     - name: Validate YAML syntax
       run: |
         # Find all YAML files and validate them
@@ -36,7 +36,7 @@ jobs:
         else
           echo "No YAML files found in template directory"
         fi
-        
+
     - name: Check required template files
       run: |
         # Check for main template file
@@ -45,19 +45,19 @@ jobs:
           exit 1
         fi
         echo "✅ template.yaml exists"
-        
+
         # Check for template content
         if [ ! -d "template/template" ]; then
           echo "❌ Missing template/template directory"
           exit 1
         fi
         echo "✅ template directory exists"
-        
+
     - name: Validate template structure
       run: |
         # Check template.yaml has required sections
         REQUIRED_SECTIONS=("apiVersion" "kind" "metadata" "spec")
-        
+
         for section in "${REQUIRED_SECTIONS[@]}"; do
           if grep -q "$section:" template/template.yaml; then
             echo "✅ Found section: $section"
@@ -66,7 +66,7 @@ jobs:
             exit 1
           fi
         done
-        
+
     - name: Test template parameter validation
       run: |
         # Simple test to check if template has parameters section
@@ -75,7 +75,7 @@ jobs:
         else
           echo "⚠️  Template missing parameters section"
         fi
-        
+
         # Check for common required parameters
         COMMON_PARAMS=("projectName" "projectOwner")
         for param in "${COMMON_PARAMS[@]}"; do
@@ -85,7 +85,7 @@ jobs:
             echo "⚠️  Missing recommended parameter: $param"
           fi
         done
-        
+
     - name: Validate generated template files
       run: |
         # Check that template files exist and are valid YAML

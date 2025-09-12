@@ -71,4 +71,16 @@ coverage/
 
 # Test artifacts
 testdata/
-*.test 
+*.test
+
+# Local testing scripts and files
+test-workflows-local.sh
+act-local-test.sh
+test-workflows.sh
+.secrets
+.actrc
+Dockerfile.runner
+
+# Local testing documentation
+ACT_TESTING_GUIDE.md
+WORKFLOW_FIXES_SUMMARY.md 

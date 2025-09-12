@@ -89,9 +89,8 @@ branding:
 # Runs configuration
 runs:
   using: 'docker'
-  image: 'Dockerfile'
+  image: 'docker://docker.io/${{ github.repository_owner }}/nobl9-github-action:latest'
   args:
-    - 'process'
     - '--client-id'
     - '${{ inputs.client-id }}'
     - '--client-secret'

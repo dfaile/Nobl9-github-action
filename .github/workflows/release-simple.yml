@@ -12,8 +12,8 @@ on:
         type: string
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ github.repository_owner }}/nobl9-github-action
 
 jobs:
   release:
@@ -22,20 +22,20 @@ jobs:
     permissions:
       contents: write
       packages: write
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        
+
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
         go-version: '1.21'
         cache: true
         cache-dependency-path: action/go.sum
-        
+
     - name: Get version and image name
       id: version
       run: |
@@ -46,34 +46,34 @@ jobs:
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
-        
+
         # Convert repository name to lowercase for Docker
         IMAGE_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
         echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
         echo "Image name: $IMAGE_NAME"
-        
+
     - name: Build binaries
       run: |
         cd action
         mkdir -p ../dist
-        
+
         # Build for multiple platforms
         GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ../dist/nobl9-action-linux-amd64 ./cmd/main.go
         GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o ../dist/nobl9-action-linux-arm64 ./cmd/main.go
         GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o ../dist/nobl9-action-darwin-amd64 ./cmd/main.go
         GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o ../dist/nobl9-action-darwin-arm64 ./cmd/main.go
         GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ../dist/nobl9-action-windows-amd64.exe ./cmd/main.go
-        
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-      
-    - name: Log in to Container Registry
+
+    - name: Log in to Docker Hub
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-        
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -85,7 +85,7 @@ jobs:
           ${{ env.REGISTRY }}/${{ steps.version.outputs.image_name }}:${{ steps.version.outputs.version }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        
+
     - name: Generate changelog
       id: changelog
       run: |
@@ -96,13 +96,13 @@ jobs:
         else
           CHANGELOG="- Initial release"
         fi
-        
+
         {
           echo "changelog<<EOF"
           echo "$CHANGELOG"
           echo "EOF"
         } >> $GITHUB_OUTPUT
-        
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
@@ -111,12 +111,12 @@ jobs:
         body: |
           ## What's Changed
           ${{ steps.changelog.outputs.changelog }}
-          
+
           ## Docker Image
           ```bash
           docker pull ${{ env.REGISTRY }}/${{ steps.version.outputs.image_name }}:${{ steps.version.outputs.version }}
           ```
-          
+
           ## Usage
           ```yaml
           - name: Deploy to Nobl9
