@@ -7,12 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/your-org/nobl9-action/pkg/logger"
+	"github.com/bmatcuk/doublestar/v4"
+	"github.com/sirupsen/logrus"
 )
 
 // Scanner handles repository file scanning and processing
 type Scanner struct {
-	logger *logger.Logger
+	logger *logrus.Logger
 }
 
 // FileInfo represents information about a scanned file
@@ -39,18 +40,18 @@ type ScanResult struct {
 }
 
 // New creates a new scanner instance
-func New(log *logger.Logger) *Scanner {
+func New() *Scanner {
 	return &Scanner{
-		logger: log,
+		logger: logrus.StandardLogger(),
 	}
 }
 
 // Scan scans the repository for files matching the pattern
 func (s *Scanner) Scan(repoPath, filePattern string) (*ScanResult, error) {
-	s.logger.Info("Starting repository file scan", logger.Fields{
+	logrus.WithFields(logrus.Fields{
 		"repo_path":    repoPath,
 		"file_pattern": filePattern,
-	})
+	}).Info("Starting repository file scan")
 
 	result := &ScanResult{
 		Files:  make([]*FileInfo, 0),
@@ -80,12 +81,12 @@ func (s *Scanner) Scan(repoPath, filePattern string) (*ScanResult, error) {
 	result.YAMLFiles = s.countYAMLFiles(result.Files)
 	result.Nobl9Files = s.countNobl9Files(result.Files)
 
-	s.logger.Info("Repository file scan completed", logger.Fields{
+	logrus.WithFields(logrus.Fields{
 		"total_files": result.TotalFiles,
 		"yaml_files":  result.YAMLFiles,
 		"nobl9_files": result.Nobl9Files,
 		"errors":      len(result.Errors),
-	})
+	}).Info("Repository file scan completed")
 
 	return result, nil
 }
@@ -137,118 +138,26 @@ func (s *Scanner) expandPatterns(repoPath, filePattern string) ([]string, error)
 
 // scanPattern scans files matching a specific pattern
 func (s *Scanner) scanPattern(pattern string, result *ScanResult) error {
-	s.logger.Debug("Scanning pattern", logger.Fields{
-		"pattern": pattern,
-	})
+	logrus.WithField("pattern", pattern).Debug("Scanning pattern")
 
-	// Use filepath.Glob for simple patterns
-	if !strings.Contains(pattern, "**") {
-		matches, err := filepath.Glob(pattern)
-		if err != nil {
-			return fmt.Errorf("failed to glob pattern: %w", err)
+	// Use doublestar for glob pattern matching (supports **)
+	matches, err := doublestar.FilepathGlob(pattern)
+	if err != nil {
+		return fmt.Errorf("failed to glob pattern: %w", err)
+	}
+
+	for _, match := range matches {
+		if err := s.processFile(match, result); err != nil {
+			result.Errors = append(result.Errors, err)
 		}
-
-		for _, match := range matches {
-			if err := s.processFile(match, result); err != nil {
-				result.Errors = append(result.Errors, err)
-			}
-		}
-		return nil
 	}
 
-	// Handle recursive patterns with **
-	return s.scanRecursivePattern(pattern, result)
-}
-
-// scanRecursivePattern scans files matching recursive patterns
-func (s *Scanner) scanRecursivePattern(pattern string, result *ScanResult) error {
-	// Extract base directory and file pattern
-	baseDir, filePattern := s.extractRecursivePattern(pattern)
-
-	s.logger.Debug("Scanning recursive pattern", logger.Fields{
-		"base_dir":     baseDir,
-		"file_pattern": filePattern,
-	})
-
-	return filepath.WalkDir(baseDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			result.Errors = append(result.Errors, fmt.Errorf("error accessing path %s: %w", path, err))
-			return nil // Continue walking
-		}
-
-		// Skip directories
-		if d.IsDir() {
-			return nil
-		}
-
-		// Check if file matches pattern
-		if s.matchesPattern(path, filePattern) {
-			if err := s.processFile(path, result); err != nil {
-				result.Errors = append(result.Errors, err)
-			}
-		}
-
-		return nil
-	})
-}
-
-// extractRecursivePattern extracts base directory and file pattern from recursive pattern
-func (s *Scanner) extractRecursivePattern(pattern string) (string, string) {
-	parts := strings.Split(pattern, "**")
-	if len(parts) != 2 {
-		// Fallback to simple pattern
-		return filepath.Dir(pattern), filepath.Base(pattern)
-	}
-
-	baseDir := strings.TrimSuffix(parts[0], "/")
-	filePattern := strings.TrimPrefix(parts[1], "/")
-
-	if baseDir == "" {
-		baseDir = "."
-	}
-
-	return baseDir, filePattern
-}
-
-// matchesPattern checks if a file path matches a pattern
-func (s *Scanner) matchesPattern(path, pattern string) bool {
-	// Simple pattern matching - can be enhanced with regex
-	fileName := filepath.Base(path)
-
-	// Handle wildcards
-	if strings.Contains(pattern, "*") {
-		return s.matchesWildcard(fileName, pattern)
-	}
-
-	// Exact match
-	return fileName == pattern
-}
-
-// matchesWildcard checks if a filename matches a wildcard pattern
-func (s *Scanner) matchesWildcard(fileName, pattern string) bool {
-	// Simple wildcard matching - can be enhanced
-	if pattern == "*" {
-		return true
-	}
-
-	if strings.HasPrefix(pattern, "*.") {
-		ext := strings.TrimPrefix(pattern, "*")
-		return strings.HasSuffix(fileName, ext)
-	}
-
-	if strings.HasSuffix(pattern, "*") {
-		prefix := strings.TrimSuffix(pattern, "*")
-		return strings.HasPrefix(fileName, prefix)
-	}
-
-	return fileName == pattern
+	return nil
 }
 
 // processFile processes a single file
 func (s *Scanner) processFile(filePath string, result *ScanResult) error {
-	s.logger.Debug("Processing file", logger.Fields{
-		"file_path": filePath,
-	})
+	logrus.WithField("file_path", filePath).Debug("Processing file")
 
 	// Get file information
 	info, err := os.Stat(filePath)
@@ -285,12 +194,12 @@ func (s *Scanner) processFile(filePath string, result *ScanResult) error {
 
 	result.Files = append(result.Files, fileInfo)
 
-	s.logger.Debug("File processed", logger.Fields{
+	logrus.WithFields(logrus.Fields{
 		"file_path": filePath,
 		"is_yaml":   fileInfo.IsYAML,
 		"is_nobl9":  fileInfo.IsNobl9,
 		"size":      fileInfo.Size,
-	})
+	}).Debug("File processed")
 
 	return nil
 }
@@ -312,16 +221,30 @@ func (s *Scanner) isYAMLFile(filePath string) bool {
 func (s *Scanner) isNobl9File(content []byte) bool {
 	contentStr := string(content)
 
-	// Check for Nobl9-specific indicators
+	// Check for Nobl9-specific indicators based on the official YAML guide
 	nobl9Indicators := []string{
-		"apiVersion: nobl9.com/",
-		"kind: Project",
-		"kind: RoleBinding",
-		"kind: SLO",
-		"kind: SLI",
+		"apiVersion: n9/v1alpha",
+		"kind: Agent",
+		"kind: Alert",
+		"kind: AlertMethod",
 		"kind: AlertPolicy",
-		"kind: DataSource",
-		"nobl9.io/",
+		"kind: AlertSilence",
+		"kind: Annotation",
+		"kind: BudgetAdjustment",
+		"kind: DataExport",
+		"kind: Direct",
+		"kind: Objective",
+		"kind: Project",
+		"kind: Report",
+		"kind: RoleBinding",
+		"kind: Service",
+		"kind: SLO",
+		"kind: UserGroup",
+		// Composite SLO indicators
+		"composite:",
+		"maxDelay:",
+		"components:",
+		"whenDelayed:",
 	}
 
 	for _, indicator := range nobl9Indicators {
@@ -390,9 +313,7 @@ func (s *Scanner) GetFilesWithErrors(result *ScanResult) []*FileInfo {
 
 // ValidateFile validates a single file
 func (s *Scanner) ValidateFile(filePath string) (*FileInfo, error) {
-	s.logger.Debug("Validating file", logger.Fields{
-		"file_path": filePath,
-	})
+	logrus.WithField("file_path", filePath).Debug("Validating file")
 
 	fileInfo := &FileInfo{
 		Path:   filePath,
@@ -417,11 +338,11 @@ func (s *Scanner) ValidateFile(filePath string) (*FileInfo, error) {
 		return fileInfo, fmt.Errorf("file does not contain Nobl9 configuration")
 	}
 
-	s.logger.Debug("File validation completed", logger.Fields{
+	logrus.WithFields(logrus.Fields{
 		"file_path": filePath,
 		"is_nobl9":  fileInfo.IsNobl9,
 		"size":      len(content),
-	})
+	}).Debug("File validation completed")
 
 	return fileInfo, nil
 }

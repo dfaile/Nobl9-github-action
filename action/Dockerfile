@@ -42,17 +42,18 @@ WORKDIR /app
 # Copy binary from builder stage
 COPY --from=builder /app/nobl9-action /app/nobl9-action
 
-# Copy any additional runtime files
+# Copy entrypoint script and any additional runtime files
+COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
 COPY --from=builder /app/action.yml /app/action.yml
 
-# Change ownership to non-root user
-RUN chown -R nobl9:nobl9 /app
+# Make entrypoint executable and change ownership to non-root user
+RUN chmod +x /app/entrypoint.sh && chown -R nobl9:nobl9 /app
 
 # Switch to non-root user
 USER nobl9
 
 # Set entrypoint
-ENTRYPOINT ["/app/nobl9-action"]
+ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Default command
+# Default command (will be overridden by action.yml args)
 CMD ["--help"] 

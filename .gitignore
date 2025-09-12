@@ -15,6 +15,8 @@ go.mod
 /bin/
 *.exe
 nobl9-action
+action/main
+action/nobl9-action
 
 # Logs
 *.log
@@ -43,6 +45,8 @@ Thumbs.db
 .cursor/
 tasks/
 
+# Claude
+.claude/
 # Env and secrets
 .env
 .env.*

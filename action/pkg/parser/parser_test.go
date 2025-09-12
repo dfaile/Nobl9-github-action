@@ -6,14 +6,13 @@ import (
 	"testing"
 
 	"github.com/nobl9/nobl9-go/manifest"
-	"github.com/your-org/nobl9-action/pkg/logger"
-	"github.com/your-org/nobl9-action/pkg/nobl9"
-	"github.com/your-org/nobl9-action/pkg/scanner"
+	"github.com/nobl9/nobl9-go/sdk"
+	"github.com/sirupsen/logrus"
 )
 
 func TestNewParser(t *testing.T) {
-	log := logger.New(logger.LevelInfo, logger.FormatJSON)
-	client := &nobl9.Client{}
+	log := logrus.New()
+	client := &sdk.Client{}
 
 	parser := New(client, log)
 
@@ -31,8 +30,8 @@ func TestNewParser(t *testing.T) {
 }
 
 func TestParseYAMLContent(t *testing.T) {
-	log := logger.New(logger.LevelInfo, logger.FormatJSON)
-	client := &nobl9.Client{}
+	log := logrus.New()
+	client := &sdk.Client{}
 	parser := New(client, log)
 
 	tests := []struct {
@@ -110,21 +109,21 @@ spec:
 }
 
 func TestParseFile(t *testing.T) {
-	log := logger.New(logger.LevelInfo, logger.FormatJSON)
-	client := &nobl9.Client{}
+	log := logrus.New()
+	client := &sdk.Client{}
 	parser := New(client, log)
 
 	ctx := context.Background()
 
 	tests := []struct {
 		name        string
-		fileInfo    *scanner.FileInfo
+		fileInfo    *FileInfo
 		expectError bool
 		expectValid bool
 	}{
 		{
 			name: "valid Nobl9 file",
-			fileInfo: &scanner.FileInfo{
+			fileInfo: &FileInfo{
 				Path:    "test.yaml",
 				Size:    100,
 				IsYAML:  true,
@@ -141,7 +140,7 @@ spec:
 		},
 		{
 			name: "file with error",
-			fileInfo: &scanner.FileInfo{
+			fileInfo: &FileInfo{
 				Path:  "error.yaml",
 				Error: fmt.Errorf("file read error"),
 			},
@@ -150,7 +149,7 @@ spec:
 		},
 		{
 			name: "non-Nobl9 file",
-			fileInfo: &scanner.FileInfo{
+			fileInfo: &FileInfo{
 				Path:    "config.yaml",
 				Size:    50,
 				IsYAML:  true,
@@ -165,7 +164,7 @@ metadata:
 		},
 		{
 			name: "invalid YAML content",
-			fileInfo: &scanner.FileInfo{
+			fileInfo: &FileInfo{
 				Path:    "invalid.yaml",
 				Size:    30,
 				IsYAML:  true,
@@ -212,13 +211,13 @@ metadata:
 }
 
 func TestParseFiles(t *testing.T) {
-	log := logger.New(logger.LevelInfo, logger.FormatJSON)
-	client := &nobl9.Client{}
+	log := logrus.New()
+	client := &sdk.Client{}
 	parser := New(client, log)
 
 	ctx := context.Background()
 
-	validFile := &scanner.FileInfo{
+	validFile := &FileInfo{
 		Path:    "valid.yaml",
 		Size:    100,
 		IsYAML:  true,
@@ -231,7 +230,7 @@ spec:
   displayName: Test Project`),
 	}
 
-	invalidFile := &scanner.FileInfo{
+	invalidFile := &FileInfo{
 		Path:    "invalid.yaml",
 		Size:    30,
 		IsYAML:  true,
@@ -243,31 +242,31 @@ spec:
 
 	tests := []struct {
 		name        string
-		files       []*scanner.FileInfo
+		files       []*FileInfo
 		expectError bool
 		expectValid bool
 	}{
 		{
 			name:        "no files",
-			files:       []*scanner.FileInfo{},
+			files:       []*FileInfo{},
 			expectError: false,
 			expectValid: true,
 		},
 		{
 			name:        "single valid file",
-			files:       []*scanner.FileInfo{validFile},
+			files:       []*FileInfo{validFile},
 			expectError: false,
 			expectValid: true,
 		},
 		{
 			name:        "single invalid file",
-			files:       []*scanner.FileInfo{invalidFile},
+			files:       []*FileInfo{invalidFile},
 			expectError: true, // ParseFiles returns error when any file is invalid
 			expectValid: false,
 		},
 		{
 			name:        "mixed files",
-			files:       []*scanner.FileInfo{validFile, invalidFile},
+			files:       []*FileInfo{validFile, invalidFile},
 			expectError: true, // ParseFiles returns error when any file is invalid
 			expectValid: true, // But there is at least one valid file
 		},
@@ -313,8 +312,8 @@ spec:
 }
 
 func TestGetValidObjects(t *testing.T) {
-	log := logger.New(logger.LevelInfo, logger.FormatJSON)
-	client := &nobl9.Client{}
+	log := logrus.New()
+	client := &sdk.Client{}
 	parser := New(client, log)
 
 	// Create test results
@@ -335,8 +334,8 @@ func TestGetValidObjects(t *testing.T) {
 }
 
 func TestGetInvalidObjects(t *testing.T) {
-	log := logger.New(logger.LevelInfo, logger.FormatJSON)
-	client := &nobl9.Client{}
+	log := logrus.New()
+	client := &sdk.Client{}
 	parser := New(client, log)
 
 	// Create test results
@@ -357,8 +356,8 @@ func TestGetInvalidObjects(t *testing.T) {
 }
 
 func TestGetErrors(t *testing.T) {
-	log := logger.New(logger.LevelInfo, logger.FormatJSON)
-	client := &nobl9.Client{}
+	log := logrus.New()
+	client := &sdk.Client{}
 	parser := New(client, log)
 
 	// Create test results with errors
@@ -379,8 +378,8 @@ func TestGetErrors(t *testing.T) {
 }
 
 func TestIsValid(t *testing.T) {
-	log := logger.New(logger.LevelInfo, logger.FormatJSON)
-	client := &nobl9.Client{}
+	log := logrus.New()
+	client := &sdk.Client{}
 	parser := New(client, log)
 
 	tests := []struct {
