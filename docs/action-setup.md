@@ -18,7 +18,7 @@ Before setting up the action, ensure you have:
 
 ## Required Secrets
 
-The action requires the following GitHub secrets to authenticate with Nobl9:
+The action requires the following GitHub secrets to authenticate with Nobl9 and Docker Hub:
 
 ### Core Secrets
 
@@ -111,6 +111,29 @@ For different environments (staging/production):
    - Add environment-specific secrets
    - Use environment protection rules if needed
 
+### Docker Hub Secrets (for Releases)
+
+#### `DOCKERHUB_USERNAME`
+- **Description:** Your Docker Hub username
+- **Type:** String
+- **Required:** For releases only
+- **Example:** `your-dockerhub-username`
+- **How to obtain:**
+  1. Create a Docker Hub account at [hub.docker.com](https://hub.docker.com/)
+  2. Your username is displayed in your profile
+
+#### `DOCKERHUB_TOKEN`
+- **Description:** Docker Hub access token for authentication
+- **Type:** String (sensitive)
+- **Required:** For releases only
+- **Example:** `dckr_pat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+- **How to obtain:**
+  1. Go to [Docker Hub](https://hub.docker.com/) → Account Settings → Security
+  2. Click "New Access Token"
+  3. Give it a name (e.g., "GitHub Actions")
+  4. Select "Read, Write, Delete" permissions
+  5. Copy the token and add it as a GitHub secret
+
 ## Workflow Configuration
 
 ### Basic Workflow Setup
@@ -141,7 +164,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Deploy to Nobl9
-        uses: your-org/nobl9-action@v1
+        uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
         with:
           client-id: ${{ secrets.NOBL9_CLIENT_ID }}
           client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
@@ -188,7 +211,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Deploy to Nobl9
-        uses: your-org/nobl9-action@v1
+        uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
         with:
           client-id: ${{ secrets.NOBL9_CLIENT_ID }}
           client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
@@ -378,7 +401,7 @@ Test configurations without making changes:
 
 ```yaml
 - name: Validate Nobl9 Configuration
-  uses: your-org/nobl9-action@v1
+  uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
   with:
     client-id: ${{ secrets.NOBL9_CLIENT_ID }}
     client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
@@ -410,7 +433,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: your-org/nobl9-action@v1
+      - uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
         with:
           client-id: ${{ secrets.NOBL9_STAGING_CLIENT_ID }}
           client-secret: ${{ secrets.NOBL9_STAGING_CLIENT_SECRET }}

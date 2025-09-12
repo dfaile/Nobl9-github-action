@@ -146,21 +146,29 @@ For detailed local development instructions, see [Local Development Setup Guide]
        steps:
          - uses: actions/checkout@v4
          - name: Sync Nobl9 Projects
-           uses: your-org/nobl9-action@v1
+           uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
            with:
              client-id: ${{ secrets.NOBL9_CLIENT_ID }}
              client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
              dry-run: false
-             files: "**/*.yaml"
+             file-pattern: "**/*.yaml"
    ```
 
 2. **Configure Required Secrets**
    - `NOBL9_CLIENT_ID` - Your Nobl9 API client ID
    - `NOBL9_CLIENT_SECRET` - Your Nobl9 API client secret
+   - `DOCKERHUB_USERNAME` - Your Docker Hub username (for releases)
+   - `DOCKERHUB_TOKEN` - Your Docker Hub access token (for releases)
 
 3. **Environment Configuration**
    - The action automatically detects the Nobl9 environment from your credentials
    - Supports multiple environments (dev, staging, prod)
+
+4. **Docker Hub Setup (for Releases)**
+   - Create a Docker Hub account if you don't have one
+   - Generate an access token at [Docker Hub](https://hub.docker.com/) → Account Settings → Security
+   - Add the token as `DOCKERHUB_TOKEN` secret in your GitHub repository
+   - The release workflow will automatically build and push Docker images to your Docker Hub account
 
 ## Usage
 
@@ -179,12 +187,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: your-org/nobl9-action@v1
+      - uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
         with:
           client-id: ${{ secrets.NOBL9_CLIENT_ID }}
           client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
           dry-run: false
-          files: "**/*.yaml"
+          file-pattern: "**/*.yaml"
 ```
 
 #### Action Inputs
@@ -194,9 +202,12 @@ jobs:
 | `client-id` | Nobl9 API client ID | Yes | - |
 | `client-secret` | Nobl9 API client secret | Yes | - |
 | `dry-run` | Validate files without making changes | No | `false` |
-| `files` | File pattern to process | No | `**/*.yaml` |
+| `file-pattern` | File pattern to process | No | `**/*.yaml` |
+| `repo-path` | Repository path to scan | No | `.` |
 | `force` | Force processing even if validation fails | No | `false` |
 | `validate-only` | Only validate files, don't process | No | `false` |
+| `log-level` | Log level (debug, info, warn, error) | No | `info` |
+| `log-format` | Log format (json, text) | No | `json` |
 
 #### Action Outputs
 
@@ -260,6 +271,44 @@ spec:
     - user@example.com
     - another.user@example.com
 ```
+
+## GitHub Actions Workflows
+
+This repository includes several GitHub Actions workflows for CI/CD and quality assurance:
+
+### Available Workflows
+
+1. **CI Workflow** (`.github/workflows/ci.yml`)
+   - Runs on push and pull requests
+   - Tests Go code compilation and unit tests
+   - Runs linting with golangci-lint
+   - Builds the action and tests Docker build
+
+2. **Security Workflow** (`.github/workflows/security.yml`)
+   - Runs on push and pull requests
+   - Vulnerability scanning with Trivy
+   - Go vulnerability checking with govulncheck
+   - Secret scanning with TruffleHog and Gitleaks
+   - ⚠️ **Note**: Automatic weekly scans are disabled to save GitHub Actions minutes
+
+3. **Template Validation** (`.github/workflows/template-validation.yml`)
+   - Runs on changes to template files
+   - Validates YAML syntax with yamllint
+   - Checks template structure and required fields
+
+4. **Release Workflow** (`.github/workflows/release-simple.yml`)
+   - Runs on tag pushes and manual dispatch
+   - Builds multi-platform binaries
+   - Builds and pushes Docker images to Docker Hub
+   - Creates GitHub releases with changelog
+
+### Workflow Features
+
+- ✅ **Docker Hub Integration**: All workflows use Docker Hub for container images
+- ✅ **Error Resilient**: Proper error handling and fallbacks
+- ✅ **Resource Efficient**: Optimized to minimize GitHub Actions minutes usage
+- ✅ **Multi-Platform**: Supports Linux and macOS builds
+- ✅ **Security Focused**: Comprehensive security scanning and validation
 
 ## Development
 
@@ -340,6 +389,16 @@ nobl9-github-action/
    - Check GitHub secrets are properly configured
    - Review action logs for detailed error messages
    - Verify file patterns match your YAML files
+
+5. **Docker Hub Authentication Issues**
+   - Verify `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets are set
+   - Check that the Docker Hub token has the correct permissions
+   - Ensure the token is not expired
+
+6. **Workflow Execution Issues**
+   - Check that workflows are not disabled in repository settings
+   - Verify branch protection rules allow workflow execution
+   - Review workflow permissions and ensure they're properly configured
 
 ### Getting Help
 

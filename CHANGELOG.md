@@ -14,9 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automated testing and CI/CD workflows
 - Security scanning and dependency management
 - Documentation and examples
+- Docker Hub integration for container images
+- Local testing scripts for workflow validation
+- Comprehensive workflow documentation
 
 ### Changed
-- N/A
+- Updated all workflows to use Docker Hub instead of GitHub Container Registry
+- Fixed security workflow logic errors and impossible conditions
+- Improved error handling across all workflows
+- Updated template validation workflow to use Python 3.11
+- Enhanced CI workflow with proper Docker build testing
+- Fixed example workflow syntax and Docker Hub integration
+- Commented out automatic security scan schedule to save GitHub Actions minutes
+- Updated action.yml to use Docker Hub image reference
 
 ### Deprecated
 - N/A
