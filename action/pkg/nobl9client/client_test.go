@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nobl9/nobl9-go/manifest"
 	"github.com/nobl9/nobl9-go/sdk"
 )
 
@@ -20,10 +19,12 @@ func TestNewClient(t *testing.T) {
 
 	if client == nil {
 		t.Error("expected client to be created")
+		return
 	}
 
 	if client.sdkClient == nil {
 		t.Error("expected SDK client to be set")
+		return
 	}
 
 	if client.timeout != 60*time.Second {
@@ -51,6 +52,7 @@ func TestProcessObjects(t *testing.T) {
 
 	if result == nil {
 		t.Error("expected result to be created")
+		return
 	}
 
 	if result.Projects == nil {
@@ -222,36 +224,6 @@ func TestTruncate(t *testing.T) {
 	}
 }
 
-// Mock objects for testing
-type mockObject struct {
-	kind manifest.Kind
-	name string
-}
-
-func (m *mockObject) GetKind() manifest.Kind {
-	return m.kind
-}
-
-func (m *mockObject) GetName() string {
-	return m.name
-}
-
-func (m *mockObject) GetVersion() manifest.Version {
-	return manifest.Version("n9/v1alpha")
-}
-
-func (m *mockObject) Validate() error {
-	return nil
-}
-
-func (m *mockObject) GetManifestSource() string {
-	return "test"
-}
-
-func (m *mockObject) SetManifestSource(source string) manifest.Object {
-	// Mock implementation - return self
-	return m
-}
 
 type mockError struct{}
 

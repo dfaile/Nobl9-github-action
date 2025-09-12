@@ -284,31 +284,6 @@ func (p *Parser) isValidKind(kind manifest.Kind) bool {
 	return true
 }
 
-// isCompositeSLO checks if an SLO object is a Composite SLO
-func (p *Parser) isCompositeSLO(obj manifest.Object) bool {
-	if obj.GetKind() != manifest.KindSLO {
-		return false
-	}
-
-	// Check if the SLO has composite-specific fields
-	// This would require accessing the SLO spec, which might need SDK-specific methods
-	// For now, we'll return false as the SDK should handle this
-	return false
-}
-
-// validateCompositeSLO validates Composite SLO specific requirements
-func (p *Parser) validateCompositeSLO(obj manifest.Object) error {
-	// Composite SLO validation would go here
-	// This includes validating:
-	// - maxDelay field
-	// - components structure
-	// - component weights
-	// - whenDelayed values
-	// - time windows for composites
-
-	// For now, we'll rely on the SDK validation
-	return nil
-}
 
 // ValidateManifest validates a Nobl9 manifest without parsing
 func (p *Parser) ValidateManifest(ctx context.Context, content []byte) error {

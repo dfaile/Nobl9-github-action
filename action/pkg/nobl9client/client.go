@@ -319,10 +319,6 @@ type ParsedObject struct {
 
 // Helper functions from your lambda
 
-// ptr creates a pointer to a string
-func ptr(s string) *string {
-	return &s
-}
 
 // sanitizeName ensures the string is RFC-1123 compliant (from your lambda)
 func sanitizeName(name string) string {
