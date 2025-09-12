@@ -29,7 +29,7 @@ The framework supports four log levels with increasing severity:
 ```yaml
 # GitHub Actions workflow
 - name: Sync Nobl9 Projects
-  uses: ./
+  uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
   with:
     log-level: "info"    # debug, info, warn, error
     log-format: "json"   # json, text
@@ -367,7 +367,7 @@ The logger integrates with GitHub Actions output for better visibility:
 ```yaml
 # GitHub Actions workflow
 - name: Sync Nobl9 Projects
-  uses: ./
+  uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
   with:
     log-level: "info"
     log-format: "json"
@@ -442,7 +442,7 @@ Enable debug logging for troubleshooting:
 
 ```yaml
 - name: Debug Nobl9 Action
-  uses: ./
+  uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
   with:
     log-level: "debug"
     log-format: "text"
