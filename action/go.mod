@@ -1,6 +1,6 @@
 module github.com/your-org/nobl9-action
 
-go 1.24.4
+go 1.24.6
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.8.1

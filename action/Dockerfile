@@ -1,6 +1,6 @@
 # Multi-stage build for Nobl9 GitHub Action
 # Stage 1: Build the Go application
-FROM golang:1.24.4-alpine AS builder
+FROM golang:1.24.6-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates tzdata
