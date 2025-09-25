@@ -300,7 +300,7 @@ log.Info("Users found", logger.Fields{
 ```go
 // Apply a Nobl9 manifest
 manifest := []byte(`
-apiVersion: nobl9.com/v1
+apiVersion: n9/v1alpha
 kind: Project
 metadata:
   name: my-project

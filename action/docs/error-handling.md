@@ -321,7 +321,7 @@ The error handling system integrates seamlessly with GitHub Actions:
 
 ```yaml
 - name: Process Nobl9 Configuration
-  uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
+  uses: docker://docker.io/dfaile/nobl9-github-action:latest
   with:
     client-id: ${{ secrets.NOBL9_CLIENT_ID }}
     client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}

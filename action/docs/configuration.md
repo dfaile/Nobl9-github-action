@@ -44,7 +44,7 @@ The action loads configuration in the following order:
 ```yaml
 # GitHub Actions workflow
 - name: Sync Nobl9 Projects
-  uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
+  uses: docker://docker.io/dfaile/nobl9-github-action:latest
   with:
     client-id: ${{ secrets.NOBL9_CLIENT_ID }}
     client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
@@ -259,7 +259,7 @@ export GITHUB_WORKSPACE="/path/to/repo"
 ### Basic Configuration
 ```yaml
 - name: Sync Nobl9 Projects
-  uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
+  uses: docker://docker.io/dfaile/nobl9-github-action:latest
   with:
     client-id: ${{ secrets.NOBL9_CLIENT_ID }}
     client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
@@ -268,7 +268,7 @@ export GITHUB_WORKSPACE="/path/to/repo"
 ### Advanced Configuration
 ```yaml
 - name: Advanced Nobl9 Sync
-  uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
+  uses: docker://docker.io/dfaile/nobl9-github-action:latest
   with:
     client-id: ${{ secrets.NOBL9_CLIENT_ID }}
     client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
@@ -284,7 +284,7 @@ export GITHUB_WORKSPACE="/path/to/repo"
 ### Validation Workflow
 ```yaml
 - name: Validate Nobl9 Configs
-  uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
+  uses: docker://docker.io/dfaile/nobl9-github-action:latest
   with:
     client-id: ${{ secrets.NOBL9_CLIENT_ID }}
     client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
@@ -295,7 +295,7 @@ export GITHUB_WORKSPACE="/path/to/repo"
 ### Development Workflow
 ```yaml
 - name: Test Nobl9 Changes
-  uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
+  uses: docker://docker.io/dfaile/nobl9-github-action:latest
   with:
     client-id: ${{ secrets.NOBL9_DEV_CLIENT_ID }}
     client-secret: ${{ secrets.NOBL9_DEV_CLIENT_SECRET }}

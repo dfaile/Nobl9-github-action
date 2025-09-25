@@ -84,27 +84,23 @@ For developers who want to test and contribute to the project:
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-org/nobl9-github-action.git
-   cd nobl9-github-action
+   git clone https://github.com/dfaile/Nobl9-github-action.git
+   cd Nobl9-github-action
    ```
 
-2. **Run Automated Setup**
+2. **Configure Credentials**
    ```bash
-   ./scripts/setup-local.sh
+   # Create a .env file with your Nobl9 credentials
+   echo "NOBL9_CLIENT_ID=your-client-id" > .env
+   echo "NOBL9_CLIENT_SECRET=your-client-secret" >> .env
    ```
 
-3. **Configure Credentials**
+3. **Build and Test**
    ```bash
-   # Edit the .env file with your Nobl9 credentials
-   nano .env
+   cd action
+   go build -o nobl9-action ./cmd/main.go
+   ./nobl9-action --help
    ```
-
-4. **Test the Action**
-   ```bash
-   ./scripts/test-action.sh
-   ```
-
-For detailed local development instructions, see [Local Development Setup Guide](docs/local-development-setup.md).
 
 ### Backstage Template Setup
 
@@ -146,7 +142,7 @@ For detailed local development instructions, see [Local Development Setup Guide]
        steps:
          - uses: actions/checkout@v4
          - name: Sync Nobl9 Projects
-           uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
+           uses: docker://docker.io/dfaile/nobl9-github-action:latest
            with:
              client-id: ${{ secrets.NOBL9_CLIENT_ID }}
              client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
@@ -187,7 +183,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: docker://docker.io/your-dockerhub-username/nobl9-github-action:latest
+         - uses: docker://docker.io/dfaile/nobl9-github-action:latest
         with:
           client-id: ${{ secrets.NOBL9_CLIENT_ID }}
           client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
@@ -316,12 +312,14 @@ This repository includes several GitHub Actions workflows for CI/CD and quality 
 
 1. **Setup Environment**
    ```bash
-   ./scripts/setup-local.sh
+   cd action
+   go mod download
    ```
 
 2. **Test Locally**
    ```bash
-   ./scripts/test-action.sh
+   go build -o nobl9-action ./cmd/main.go
+   ./nobl9-action --help
    ```
 
 3. **Run Tests**
@@ -355,14 +353,12 @@ nobl9-github-action/
 │   │   ├── retry/            # Retry logic
 │   │   ├── scanner/          # File scanning
 │   │   └── validator/        # Validation logic
-│   ├── scripts/              # Development scripts
 │   ├── action.yml            # GitHub Action definition
 │   └── Dockerfile            # Container definition
 ├── template/                  # Backstage template
 │   ├── template.yaml         # Template definition
 │   └── template/             # Template files
 ├── docs/                      # Documentation
-├── scripts/                   # Setup and utility scripts
 └── .github/                   # GitHub workflows
 ```
 
@@ -413,8 +409,9 @@ nobl9-github-action/
 3. **Make Your Changes**
 4. **Test Locally**
    ```bash
-   ./scripts/setup-local.sh
-   ./scripts/test-action.sh
+   cd action
+   go build -o nobl9-action ./cmd/main.go
+   ./nobl9-action --help
    ```
 5. **Submit a Pull Request**
 

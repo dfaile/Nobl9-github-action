@@ -1,0 +1,264 @@
+name: Nobl9 Project Sync
+
+on:
+  # Trigger on push to main branch (file scanning mode)
+  push:
+    branches:
+      - main
+    paths:
+      - 'yaml/**/*.yaml'
+      - 'yaml/**/*.yml'
+
+  # Trigger on pull requests (file scanning mode)
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'yaml/**/*.yaml'
+      - 'yaml/**/*.yml'
+
+  # Manual trigger with direct parameters (Backstage template mode)
+  workflow_dispatch:
+    inputs:
+      # Project information
+      project_name:
+        description: 'Project name (must follow DNS RFC1123 standards)'
+        required: true
+        type: string
+      display_name:
+        description: 'Human-readable display name'
+        required: true
+        type: string
+      app_id:
+        description: 'Application identifier'
+        required: true
+        type: string
+      ba_number:
+        description: 'Business Application number (format: BA0000000)'
+        required: true
+        type: string
+      description:
+        description: 'Project description'
+        required: false
+        type: string
+        default: ''
+      
+      # User management
+      users:
+        description: 'JSON array of users with email and role'
+        required: true
+        type: string
+        default: '[]'
+      
+      # Processing options
+      dry_run:
+        description: 'Perform dry run only'
+        required: false
+        default: false
+        type: boolean
+      validate_only:
+        description: 'Validate only, no deployment'
+        required: false
+        default: false
+        type: boolean
+      force:
+        description: 'Force processing even if validation fails'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  sync-nobl9:
+    name: Sync Nobl9 Projects
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine processing mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "mode=direct" >> $GITHUB_OUTPUT
+            echo "Processing mode: Direct parameter input"
+          else
+            echo "mode=scan" >> $GITHUB_OUTPUT
+            echo "Processing mode: File scanning"
+          fi
+
+      - name: Sync Nobl9 Projects (File Scan Mode)
+        if: steps.mode.outputs.mode == 'scan'
+        id: nobl9-sync-scan
+        uses: docker://docker.io/dfaile/nobl9-github-action:latest
+        with:
+          # Nobl9 API credentials (from secrets)
+          client-id: ${{ secrets.NOBL9_CLIENT_ID }}
+          client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
+
+          # Repository configuration
+          repo-path: '.'
+          file-pattern: 'yaml/**/*.yaml'
+
+          # Processing options
+          dry-run: ${{ github.event.inputs.dry_run == 'true' }}
+          validate-only: ${{ github.event.inputs.validate_only == 'true' }}
+          force: ${{ github.event.inputs.force == 'true' }}
+
+          # Logging configuration
+          log-level: 'info'
+          log-format: 'json'
+
+      - name: Create temporary YAML file for direct mode
+        if: steps.mode.outputs.mode == 'direct'
+        id: create-yaml
+        run: |
+          # Create temporary directory
+          mkdir -p temp-yaml/${{ github.event.inputs.project_name }}
+          
+          # Create the Nobl9 project YAML
+          cat > temp-yaml/${{ github.event.inputs.project_name }}/nobl9-project.yaml << 'EOF'
+          ---
+          apiVersion: n9/v1alpha
+          kind: Project
+          metadata:
+            displayName: ${{ github.event.inputs.display_name }}
+            labels:
+              appid:
+              - ${{ github.event.inputs.app_id }}
+              ba_number:
+              - ${{ github.event.inputs.ba_number }}
+            name: ${{ github.event.inputs.project_name }}
+          spec:
+            description: "${{ github.event.inputs.description }}"
+
+          ---
+          apiVersion: n9/v1alpha
+          kind: RoleBinding
+          metadata:
+            name: ${{ github.event.inputs.project_name }}-role-bindings
+            project: ${{ github.event.inputs.project_name }}
+            displayName: "Role Bindings for ${{ github.event.inputs.display_name }}"
+            labels:
+              source: backstage-template
+              generated-by: nobl9-backstage-action
+              created-date: $(date +%Y-%m-%d)
+              template-version: "1.0.0"
+          spec:
+            users:
+          EOF
+          
+          # Parse users JSON and add to YAML
+          echo '${{ github.event.inputs.users }}' | jq -r '.[] | "    - email: " + .email + "\n      roles:\n        - " + .role' >> temp-yaml/${{ github.event.inputs.project_name }}/nobl9-project.yaml
+          
+          echo "yaml_path=temp-yaml/${{ github.event.inputs.project_name }}/nobl9-project.yaml" >> $GITHUB_OUTPUT
+          echo "Created temporary YAML file: temp-yaml/${{ github.event.inputs.project_name }}/nobl9-project.yaml"
+
+      - name: Sync Nobl9 Projects (Direct Mode)
+        if: steps.mode.outputs.mode == 'direct'
+        id: nobl9-sync-direct
+        uses: docker://docker.io/dfaile/nobl9-github-action:latest
+        with:
+          # Nobl9 API credentials (from secrets)
+          client-id: ${{ secrets.NOBL9_CLIENT_ID }}
+          client-secret: ${{ secrets.NOBL9_CLIENT_SECRET }}
+
+          # Repository configuration - point to the specific file
+          repo-path: '.'
+          file-pattern: 'temp-yaml/**/*.yaml'
+
+          # Processing options
+          dry-run: ${{ github.event.inputs.dry_run == 'true' }}
+          validate-only: ${{ github.event.inputs.validate_only == 'true' }}
+          force: ${{ github.event.inputs.force == 'true' }}
+
+          # Logging configuration
+          log-level: 'info'
+          log-format: 'json'
+
+      - name: Clean up temporary files
+        if: steps.mode.outputs.mode == 'direct'
+        run: |
+          rm -rf temp-yaml
+
+      - name: Display results
+        run: |
+          echo "Processing completed!"
+          if [ "${{ steps.mode.outputs.mode }}" = "scan" ]; then
+            echo "Files processed: ${{ steps.nobl9-sync-scan.outputs.processed-files }}"
+            echo "Projects created: ${{ steps.nobl9-sync-scan.outputs.projects-created }}"
+            echo "Projects updated: ${{ steps.nobl9-sync-scan.outputs.projects-updated }}"
+            echo "Role bindings created: ${{ steps.nobl9-sync-scan.outputs.role-bindings-created }}"
+            echo "Role bindings updated: ${{ steps.nobl9-sync-scan.outputs.role-bindings-updated }}"
+            echo "Users resolved: ${{ steps.nobl9-sync-scan.outputs.users-resolved }}"
+            echo "Errors: ${{ steps.nobl9-sync-scan.outputs.errors }}"
+            echo "Success: ${{ steps.nobl9-sync-scan.outputs.success }}"
+          else
+            echo "Files processed: ${{ steps.nobl9-sync-direct.outputs.processed-files }}"
+            echo "Projects created: ${{ steps.nobl9-sync-direct.outputs.projects-created }}"
+            echo "Projects updated: ${{ steps.nobl9-sync-direct.outputs.projects-updated }}"
+            echo "Role bindings created: ${{ steps.nobl9-sync-direct.outputs.role-bindings-created }}"
+            echo "Role bindings updated: ${{ steps.nobl9-sync-direct.outputs.role-bindings-updated }}"
+            echo "Users resolved: ${{ steps.nobl9-sync-direct.outputs.users-resolved }}"
+            echo "Errors: ${{ steps.nobl9-sync-direct.outputs.errors }}"
+            echo "Success: ${{ steps.nobl9-sync-direct.outputs.success }}"
+          fi
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Nobl9 Project Sync Results')
+            );
+
+            const success = '${{ steps.nobl9-sync-scan.outputs.success }}' === 'true';
+            const status = success ? '✅ Success' : '❌ Failed';
+
+            // Compose the PR comment body with sync results and status
+            const commentBody = '## Nobl9 Project Sync Results\n\n' +
+              'Status: ' + status + '\n\n' +
+              'Processing Summary:\n' +
+              '  - Files processed: ${{ steps.nobl9-sync-scan.outputs.processed-files }}\n' +
+              '  - Projects created: ${{ steps.nobl9-sync-scan.outputs.projects-created }}\n' +
+              '  - Projects updated: ${{ steps.nobl9-sync-scan.outputs.projects-updated }}\n' +
+              '  - Role bindings created: ${{ steps.nobl9-sync-scan.outputs.role-bindings-created }}\n' +
+              '  - Role bindings updated: ${{ steps.nobl9-sync-scan.outputs.role-bindings-updated }}\n' +
+              '  - Users resolved: ${{ steps.nobl9-sync-scan.outputs.users-resolved }}\n' +
+              '  - Errors: ${{ steps.nobl9-sync-scan.outputs.errors }}\n\n' +
+              'Configuration:\n' +
+              '  - Dry run: ${{ github.event.inputs.dry_run || false }}\n' +
+              '  - Validate only: ${{ github.event.inputs.validate_only || false }}\n\n' +
+              'This comment was automatically generated by the Nobl9 Project Sync action.';
+
+            // Update or create the bot comment with the sync results
+            if (botComment) {
+              // Update existing bot comment
+              await github.rest.issues.updateComment({
+                comment_id: botComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: commentBody,
+              });
+            } else {
+              // Create new bot comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: commentBody,
+              });
+            }

@@ -43,8 +43,7 @@ projects/**/*.yaml # All YAML files in projects directory and subdirectories
 The scanner automatically identifies Nobl9 configuration files by checking for:
 
 #### Nobl9 API Versions
-- `apiVersion: nobl9.com/v1`
-- `apiVersion: nobl9.com/v1beta1`
+- `apiVersion: n9/v1alpha`
 
 #### Nobl9 Resource Kinds
 - `kind: Project`

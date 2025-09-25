@@ -17,6 +17,7 @@ go.mod
 nobl9-action
 action/main
 action/nobl9-action
+action/cmd/main
 
 # Logs
 *.log
@@ -77,15 +78,10 @@ coverage/
 testdata/
 *.test
 
-# Local testing scripts and files
-test-workflows-local.sh
-act-local-test.sh
-test-workflows.sh
-.secrets
-.actrc
-Dockerfile.runner
-
-# Local testing documentation
+# Local development files
+.env
+.env.local
+.env.*.local
 
 # Setup and publishing documentation
 GITHUB_SETUP_COMPLETE.md

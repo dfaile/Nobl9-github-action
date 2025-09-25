@@ -1,0 +1,34 @@
+---
+apiVersion: n9/v1alpha
+kind: Project
+metadata:
+  displayName: ${{ values.displayName }}
+  labels:
+    appid:
+    - ${{ values.appid }}
+    ba_number:
+    - ${{ values.ba_number }}
+  name: ${{ values.projectName }}
+spec:
+  description: "${{ values.description }}"
+
+---
+apiVersion: n9/v1alpha
+kind: RoleBinding
+metadata:
+  name: ${{ values.projectName }}-role-bindings
+  project: ${{ values.projectName }}
+  displayName: "Role Bindings for ${{ values.displayName }}"
+  labels:
+    source: backstage-template
+    generated-by: nobl9-backstage-action
+    created-date: ${{ now }}
+    template-version: "1.0.0"
+spec:
+  users:
+    {% for user in values.users %}
+    # User: ${{ user.email }} - Role: ${{ user.role }}
+    - email: ${{ user.email }}
+      roles:
+        - ${{ user.role }}
+    {% endfor %} 

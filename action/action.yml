@@ -89,7 +89,7 @@ branding:
 # Runs configuration
 runs:
   using: 'docker'
-  image: 'docker://docker.io/${{ github.repository_owner }}/nobl9-github-action:latest'
+  image: 'docker://docker.io/dfaile/nobl9-github-action:latest'
   args:
     - '--client-id'
     - '${{ inputs.client-id }}'

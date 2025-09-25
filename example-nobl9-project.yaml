@@ -1,0 +1,60 @@
+# Nobl9 Project Configuration - EXAMPLE
+# This is an example file showing what the GitHub Action expects
+# Copy this file and modify the values for your actual project
+
+# =============================================================================
+# Project Definition
+# =============================================================================
+---
+apiVersion: n9/v1alpha
+kind: Project
+metadata:
+  name: example-monitoring-project
+  displayName: Example Monitoring Project
+  description: An example Nobl9 project for monitoring and SLO management
+  labels:
+    source: manual-creation
+    created-date: 2024-01-15
+    project-type: "monitoring"
+spec:
+  # Project specification (empty for basic projects)
+  # Additional project configuration can be added here as needed
+
+# =============================================================================
+# Role Bindings
+# =============================================================================
+---
+apiVersion: n9/v1alpha
+kind: RoleBinding
+metadata:
+  name: example-monitoring-project-role-bindings
+  project: example-monitoring-project
+  displayName: "Role Bindings for Example Monitoring Project"
+  labels:
+    source: manual-creation
+    created-date: 2024-01-15
+spec:
+  users:
+    # Replace these with actual user emails from your organization
+    - email: john.doe@yourcompany.com
+      roles:
+        - project-owner
+    - email: jane.smith@yourcompany.com
+      roles:
+        - project-editor
+
+# =============================================================================
+# How to Use This File
+# =============================================================================
+# 1. Copy this file to your repository
+# 2. Rename it to match your project (e.g., my-project.yaml)
+# 3. Update the metadata.name and metadata.displayName
+# 4. Replace the email addresses with real users from your organization
+# 5. Commit the file to your repository
+# 6. The GitHub Action will automatically process it and create the project in Nobl9
+#
+# The GitHub Action will:
+# 1. Validate the YAML structure
+# 2. Resolve email addresses to Okta User IDs
+# 3. Create/update the project in Nobl9
+# 4. Apply role bindings with resolved User IDs
